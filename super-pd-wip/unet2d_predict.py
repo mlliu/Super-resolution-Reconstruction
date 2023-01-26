@@ -50,7 +50,7 @@ except:
 patches_per_set = patches_per_set_h + patches_per_set_l
 # number of total training blocks, high sig blocks, random blocks used for training
 npatches = patches_per_set, patches_per_set_h, patches_per_set_l
-patch_select_mode = b_index[4]  # patch selection mode
+patch_select_mode = combomatrix[4]  # patch selection mode
 
 
 batch_size_train = 400  # training batch size
@@ -90,6 +90,7 @@ batch_size = 1000
 
 blks_rand_shift_mode = False  # random block shift mode
 
+""
 ###############################################################################
 # check if we've already trained the model; if no, train it, if yes, load it from disk
 ###############################################################################
@@ -120,13 +121,14 @@ suffix_npy = "_unet2d" + rstr + "_" + str(blksz_2d[0]) + 'x' + str(blksz_2d[1]) 
 ###############################################################################
 # load model architecture and weights from .json and .hdf5 files on disk
 ###############################################################################
-script_path = os.path.split(os.path.abspath(__file__))[0]
+#script_path = os.path.split(os.path.abspath(__file__))[0]
+script_path =os.getcwd()
 print(outpath)
 dirmodel = os.path.join(script_path, outpath)
 if not os.path.exists(dirmodel):
     sys.exit("error - ", dirmodel, "doesn't exist, so can't predict")
 #dirinput = os.path.join(script_path, "../data/test/low_res")#os.path.join(script_path, 'input_low_res_' + reduction)
-dirinput = os.path.join(script_path, "../../ARIC/scans/low_resolution_cor/1DVarderMask"+reduction,"DICOM")
+dirinput = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final/test")
 model_to_apply = modelprefix
 
 ####################################
@@ -139,8 +141,6 @@ for root, _, files in os.walk(dirinput):
             inputfiles.append(os.path.join(dirinput, f))
     break  # only check to level, no subdirs
 
-#select the last 5 images
-inputfiles = inputfiles[-5:]
 
 print('################')
 print('input files are')
@@ -148,6 +148,9 @@ for ifile in inputfiles:
     print(ifile)
 print('################')
 
+
+
+""
 ###########################################
 # perform deep learning reconstruction
 ###########################################
@@ -211,7 +214,7 @@ for inputTifs in inputfiles:
     volume1 = load_gz_to_numpy_vol(inputTifs, subset_recon_mode, subset_recon_minslc, subset_recon_maxslc)
     # adjust size to reduce computation load
     # adjust x and y dimensions of volume to divide evenly into blksz_2d
-    volume1 = crop_volume_in_xy_and_reproject_2D(volume1, crop_recon_x, crop_recon_y, blksz_2d, proj_direction)
+    #volume1 = crop_volume_in_xy_and_reproject_2D(volume1, crop_recon_x, crop_recon_y, blksz_2d, proj_direction)
     #expand dims
     volume1 = np.expand_dims(volume1, axis=2)
     if len(np.argwhere(np.isinf(volume1))) > 0:
