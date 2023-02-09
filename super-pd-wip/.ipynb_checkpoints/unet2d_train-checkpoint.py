@@ -117,9 +117,9 @@ crop_train_y = 1 #0.50 if patches_from_volume else 0.6
 ###############################################################################
 #script_path = os.path.split(os.path.abspath(__file__))[0]
 script_path =os.getcwd()
-dirtarget = os.path.join(script_path, "../../ARIC/pd_wip/wip_registration_nifti/")
+dirtarget = os.path.join(script_path, "../../ARIC/pd_wip/wip_registration_nifti/train")
 #dirsource = "data/train/CentreSquare15p25Mask"
-dirsource = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti/")
+dirsource = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final/train")
 #dirtarget = "data/train/anat1"
 try:
     srcfiles, tgtfiles = get_source_and_target_files(dirsource, dirtarget)
@@ -162,8 +162,7 @@ dirmodel = os.path.join(script_path, outpath)
 if not os.path.exists(dirmodel):
     os.makedirs(dirmodel)
 
-training_needed_flag, indices_of_datasets_to_train = should_we_train_network(
-    os.path.join(dirmodel, modelprefix + modelsuffix), srcfiles)
+training_needed_flag = should_we_train_network(os.path.join(dirmodel, modelprefix + modelsuffix), srcfiles)
 
 ""
 if training_needed_flag:

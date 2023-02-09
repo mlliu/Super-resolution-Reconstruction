@@ -93,7 +93,7 @@ blks_rand_shift_mode = False  # random block shift mode
 ""
 ###############################################################################
 # check if we've already trained the model; if no, train it, if yes, load it from disk
-###############################################################################
+# ##############################################################################
 rstr = "res" if unet_resnet_mode else ""
 p = patches_per_set, patches_per_set_h, patches_per_set_l if patches_from_volume else patches_per_slc, patches_per_slc_h, patches_per_slc_l
 modelsuffix = "_unet2d" + rstr + "-" + "[" + str(stride_2d[0]) + 'x' + str(
@@ -120,8 +120,8 @@ suffix_npy = "_unet2d" + rstr + "_" + str(blksz_2d[0]) + 'x' + str(blksz_2d[1]) 
 
 ###############################################################################
 # load model architecture and weights from .json and .hdf5 files on disk
-###############################################################################
-#script_path = os.path.split(os.path.abspath(__file__))[0]
+# ##############################################################################
+# script_path = os.path.split(os.path.abspath(__file__))[0]
 script_path =os.getcwd()
 print(outpath)
 dirmodel = os.path.join(script_path, outpath)
@@ -133,7 +133,7 @@ model_to_apply = modelprefix
 
 ####################################
 # load tif files as source to fit
-####################################
+# ###################################
 inputfiles = []
 for root, _, files in os.walk(dirinput):
     for f in files:
@@ -153,7 +153,7 @@ print('################')
 ""
 ###########################################
 # perform deep learning reconstruction
-###########################################
+# ##########################################
 for inputTifs in inputfiles:
 
     ########################################
