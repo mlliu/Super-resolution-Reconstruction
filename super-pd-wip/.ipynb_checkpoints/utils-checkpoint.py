@@ -4,7 +4,7 @@ import sys
 import time
 import nibabel as nib
 
-import cv2
+#import cv2
 import numpy as np
 import scipy.ndimage as ndi
 import tensorflow as tf
@@ -1366,6 +1366,7 @@ def compute_metric_volume_2d(volume1, volume3, patch_select_mode, stride_2d, n_s
             axestofilter = [-1]
 
         # print('computing local convolution filter...')
+        volume3 =volume3[:, :, n_slices_exclude:slc_train_end]
         vol_metric = filter_stack_in_3dirs_1dfilter(volume3, custom_filter, axestofilter)
         metric_operator = 'max'
 
