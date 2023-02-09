@@ -7,7 +7,7 @@ from utils import *
 key parameters (begin)
 ##############################################################################
 """
-combomatrix = [64, 64, 32, 32, 9, 10000, 10000, 8, False]
+combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
 '''
  in form [blksz_2d[0],           patch size in row direction (pixel units)
              blksz_2d[1],           patch size in column direction (pixel units)
@@ -53,7 +53,7 @@ npatches = patches_per_set, patches_per_set_h, patches_per_set_l
 patch_select_mode = combomatrix[4]  # patch selection mode
 
 
-batch_size_train = 400  # training batch size
+batch_size_train = 100  # training batch size
 batch_size_recon = 1000  # recon batch size
 
 blksz_2d = combomatrix[0], combomatrix[1]  # reconstruction block/patch size in pixels
@@ -124,11 +124,11 @@ suffix_npy = "_unet2d" + rstr + "_" + str(blksz_2d[0]) + 'x' + str(blksz_2d[1]) 
 # script_path = os.path.split(os.path.abspath(__file__))[0]
 script_path =os.getcwd()
 print(outpath)
-dirmodel = os.path.join(script_path, outpath)
-if not os.path.exists(dirmodel):
-    sys.exit("error - ", dirmodel, "doesn't exist, so can't predict")
+#dirmodel = os.path.join(script_path, outpath)
+#if not os.path.exists(dirmodel):
+#    sys.exit("error - ", dirmodel, "doesn't exist, so can't predict")
 #dirinput = os.path.join(script_path, "../data/test/low_res")#os.path.join(script_path, 'input_low_res_' + reduction)
-dirinput = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final/test")
+dirinput = os.path.join(script_path, "../../pd_wip/pd_nifti_final/test")
 model_to_apply = modelprefix
 
 ####################################
@@ -164,9 +164,13 @@ for inputTifs in inputfiles:
         continue
     extraconfigstring = str(unet_start_ch) + "-" + str(unet_depth) + "-" + str(unet_inc_rate) + "-" + str(
         unet_dropout) + "-" + unet_batchnorm_str + "-" + unet_residual_str
-    modelFileName, jsonFileName = get_model_and_json_files(dirmodel, model_to_apply, blks_rand_shift_mode,
-                                                           leave_one_out_train, datasetnumber, stride_2d,
-                                                           extraconfigstring)
+    #print("result",dirmodel, model_to_apply, blks_rand_shift_mode,leave_one_out_train, datasetnumber, stride_2d, extraconfigstring)
+    #modelFileName, jsonFileName = get_model_and_json_files(dirmodel, model_to_apply, blks_rand_shift_mode,
+    #                                                       leave_one_out_train, datasetnumber, stride_2d,
+    #                                                       extraconfigstring)
+    dirmodel = "medical/Super-resolution-Reconstruction/super-pd-wip/train_unet2d_adam_batch100_1psm9_ssim_loss"
+    modelFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.h5'
+    jsonFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.json'
     if len(modelFileName) == 0:
         print('could not find model for', inputfiles, 'so skip')
         continue
@@ -187,6 +191,7 @@ for inputTifs in inputfiles:
     print('reconFileNameSuffix: ', reconFileNameSuffix)
 
     fname = inputTifs.split('\\')[-1] #+ '_' + reconFileNameSuffix
+    print(fname)
     reconFileName = os.path.join(dirmodel, fname)
     print('reconFileName =>', reconFileName)
     if os.path.isfile(reconFileName):  # don't overwrite existing data
@@ -216,7 +221,7 @@ for inputTifs in inputfiles:
     # adjust x and y dimensions of volume to divide evenly into blksz_2d
     #volume1 = crop_volume_in_xy_and_reproject_2D(volume1, crop_recon_x, crop_recon_y, blksz_2d, proj_direction)
     #expand dims
-    volume1 = np.expand_dims(volume1, axis=2)
+    #volume1 = np.expand_dims(volume1, axis=2)
     if len(np.argwhere(np.isinf(volume1))) > 0:
         for xyz in np.argwhere(np.isinf(volume1)):
             volume1[xyz[0], xyz[1], xyz[2]] = 0
@@ -312,5 +317,5 @@ for inputTifs in inputfiles:
     del volume_recon_ai, volume1  # delete to save memory
 
 if sleep_when_done:
-# from: https://stackoverflow.com/questions/37009777/how-to-make-a-windows-10-computer-go-to-sleep-with-a-python-script
-os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
+    # from: https://stackoverflow.com/questions/37009777/how-to-make-a-windows-10-computer-go-to-sleep-with-a-python-script
+    os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")

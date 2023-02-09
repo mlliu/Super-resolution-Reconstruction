@@ -1,5 +1,7 @@
+import tensorflow as tf
 from keras.callbacks import ModelCheckpoint, EarlyStopping
-from keras.optimizers import SGD, Adam
+
+from tensorflow.keras.optimizers import SGD, Adam
 
 
 from utils import *
@@ -8,7 +10,7 @@ import matplotlib.pyplot as plt
 
 from unet import unet2d
 
-import tensorflow as tf
+#import tensorflow as tf
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
 
@@ -17,7 +19,7 @@ key parameters (begin)
 ##############################################################################
 """
 
-combomatrix = [64, 64, 32, 32, 9, 10000, 10000, 8, False]
+combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
 '''
  in form [blksz_2d[0],           patch size in row direction (pixel units)
              blksz_2d[1],           patch size in column direction (pixel units)
@@ -31,8 +33,8 @@ combomatrix = [64, 64, 32, 32, 9, 10000, 10000, 8, False]
 '''
 
 # test mode options
-testmode = True  # test by training/predicting the first case only for one reduction factor
-testmode_epochs = True  # limits the number of epochs
+testmode = False  # test by training/predicting the first case only for one reduction factor
+testmode_epochs = False  # limits the number of epochs
 
 # basic inputs/parameters
 #reduction_list = [4] if testmode else [ 6]  # resolution reduction factors to train/predict
@@ -71,7 +73,7 @@ else:
 
 ""
 nepochs = 2 if testmode_epochs else 200  # number of epochs to train for
-batch_size_train = 400  # training batch size
+batch_size_train = 100  # training batch size
 
 blksz_2d = combomatrix[0], combomatrix[1]   # block/patch size in pixels
 stride_2d = combomatrix[2], combomatrix[3]  # stride for obtaining training blocks
@@ -101,7 +103,7 @@ patches_per_set = patches_per_set_h + patches_per_set_l
 
 blks_rand_shift_mode = False
 training_patience = 3
-n_slices_exclude = 0  # number of edge slices to not train from (default value is zero)
+n_slices_exclude = 4  # number of edge slices to not train from (default value is zero)
 
 subset_train_mode = False  # flag that allows to only to train from a subset of slices from the full volume
 subset_train_minslc = 1  # training subset mode - minimum slice
@@ -117,9 +119,9 @@ crop_train_y = 1 #0.50 if patches_from_volume else 0.6
 # ##############################################################################
 # script_path = os.path.split(os.path.abspath(__file__))[0]
 script_path =os.getcwd()
-dirtarget = os.path.join(script_path, "../../ARIC/pd_wip/wip_registration_nifti/train")
+dirtarget = os.path.join(script_path, "../../pd_wip/wip_registration_nifti/train")
 #dirsource = "data/train/CentreSquare15p25Mask"
-dirsource = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final/train")
+dirsource = os.path.join(script_path, "../../pd_wip/pd_nifti_final/train")
 #dirtarget = "data/train/anat1"
 try:
     srcfiles, tgtfiles = get_source_and_target_files(dirsource, dirtarget)
@@ -132,7 +134,7 @@ try:
     print("tgtfiles size",len(tgtfiles))
 except:
     print(dirsource,dirtarget)
-    print('could not find', reduction, 'source or target files so skipping')
+    print('could not find', 'source or target files so skipping')
     
 
 ""
@@ -166,7 +168,7 @@ training_needed_flag = should_we_train_network(os.path.join(dirmodel, modelprefi
 
 ""
 if training_needed_flag:
-    print("model not found for sets", " ".join(str(indices_of_datasets_to_train)), ", so must train it")
+    print("model not found for sets", ", so must train it")
     ###############################################################################
     # create training data if not already created
     ###############################################################################
@@ -224,6 +226,14 @@ if training_needed_flag:
             ###################################
             # xtrain, patches1, volume1 are source # ytrain, patches3, volume3 are target
             # create metric volume used to select blocks
+            #xtrain_master_noaug[m * patches_per_set:(m + 1) * patches_per_set, :, :,0] = volume1.transpose(2,0,1)[4:4+pathches_per_set,:,:]
+            #ytrain_master_noaug[m * patches_per_set:(m + 1) * patches_per_set, :, :,0] = volume3.transpose(2,0,1)[4:4+pathches_per_set,:,:]
+            xtrain_master_noaug[m * patches_per_set:(m + 1) * patches_per_set, :, :,
+                   0] = volume1.transpose(2,0,1)[n_slices_exclude:n_slices_exclude+patches_per_set,:,:]
+            ytrain_master_noaug[m * patches_per_set:(m + 1) * patches_per_set, :, :,
+                    0] = volume3.transpose(2,0,1)[n_slices_exclude:n_slices_exclude+patches_per_set,:,:]
+            
+            '''
             vol_metric, metric_operator = compute_metric_volume_2d(volume1, volume3,
                                                                    patch_select_mode, stride_2d,
                                                                   n_slices_exclude)
@@ -251,19 +261,20 @@ if training_needed_flag:
                                                    shuffleP=False,
                                                    metric_operator=metric_operator)
 
-            slice_count = slice_count + volume3.shape[2] - 2 * n_slices_exclude
+            '''
+            #slice_count = slice_count + volume3.shape[2] - 2 * n_slices_exclude
 
-            slices_per_file.append(volume3.shape[2] - 2 * n_slices_exclude)
-            print('ytrain_master_noaug.mean: ', np.mean(ytrain_master_noaug))
+            #slices_per_file.append(volume3.shape[2] - 2 * n_slices_exclude)
+            #print('ytrain_master_noaug.mean: ', np.mean(ytrain_master_noaug))
 
             if m == (len(srcfiles) - 1):  # if last volume, save the training data to disk
                 np.save(os.path.join(script_path, 'xtrain_master_noaug' + suffix_npy), xtrain_master_noaug)
                 np.save(os.path.join(script_path, 'ytrain_master_noaug' + suffix_npy), ytrain_master_noaug)
 
-            print('total files read for training: ', len(srcfiles))
-            print('total slices read for training: ', slice_count)
-            print('unaugmented patch array size for training: ', xtrain_master_noaug.shape)
-            print('slices (or blks) read from all the files: ', slices_per_file)
+            #print('total files read for training: ', len(srcfiles))
+            #print('total slices read for training: ', slice_count)
+            #print('unaugmented patch array size for training: ', xtrain_master_noaug.shape)
+            #print('slices (or blks) read from all the files: ', slices_per_file)
          ###############################################################################
     # load training data from disk if not already created
     ###############################################################################
@@ -304,9 +315,9 @@ if training_needed_flag:
 
     n_loo_loops = 1  # only one network is trained for all data sets
 
-    if testmode:  # only do first set if we are prototyping
-        if set_to_train > 0:
-            continue
+    #if testmode:  # only do first set if we are prototyping
+    #    if set_to_train > 0:
+    #        continue
 
 
     inds_all = np.arange(0, xtrain_master.shape[0])
@@ -355,13 +366,23 @@ if training_needed_flag:
     print('xtrain size: ', xtrain.shape)
     print('ytrain size: ', ytrain.shape)
     split = int(xtrain.shape[0]*0.8)
-    train_dataset = tf.data.Dataset.from_tensor_slices((xtrain[:split,:,:,:], ytrain[:split,:,:,:]))
-    train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size_train)
+    
+    def batch_generator(x, y,batch_size):
+        N = len(xtrain)
+        i = 0
+        while True:
+            yield x[i:i+batch_size,:,:,:], y[i:i+batch_size,:,:,:]
+            i = i+batch_size
+            if i+batch_size  > N:
+                i=0
+    #train_dataset = tf.data.Dataset.from_tensor_slices((xtrain[:split,:,:,:], ytrain[:split,:,:,:]))
+    #train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size_train)
     validation_data = tf.data.Dataset.from_tensor_slices((xtrain[split:,:,:,:], ytrain[split:,:,:,:]))
     validation_data = validation_data.batch(batch_size_train)
     with tf.device('/gpu:0'):
-        history = model.fit(train_dataset,validation_data=validation_data, batch_size=max(data_augm_factor, batch_size_train),
-                            epochs=nepochs, callbacks=callbacks_list)
+        #history = model.fit(batch_generator(xtrain[:split,:,:,:], ytrain[:split,:,:,:],batch_size_train), steps_per_epoch = split//batch_size_train,validation_data=batch_generator(xtrain[split:,:,:,:], ytrain[split:,:,:,:],batch_size_train), validation_steps = (xtrain.shape[0]-split)//batch_size_train ,epochs=nepochs, callbacks=callbacks_list)
+        history = model.fit(batch_generator(xtrain[:split,:,:,:], ytrain[:split,:,:,:],batch_size_train), steps_per_epoch = split//batch_size_train,validation_data=validation_data,epochs=nepochs, callbacks=callbacks_list)
+        
         print(history.history.keys())
         print("loss: ", history.history['loss'])
         print("val_loss ", history.history['val_loss'])
