@@ -154,6 +154,7 @@ print('################')
 ###########################################
 # perform deep learning reconstruction
 ###########################################
+
 for inputTifs in inputfiles:
 
     ########################################
@@ -168,7 +169,8 @@ for inputTifs in inputfiles:
     #modelFileName, jsonFileName = get_model_and_json_files(dirmodel, model_to_apply, blks_rand_shift_mode,
     #                                                       leave_one_out_train, datasetnumber, stride_2d,
     #                                                       extraconfigstring)
-    dirmodel = "medical/Super-resolution-Reconstruction/super-pd-wip/train_unet2d_adam_batch100_1psm9_ssim_loss"
+    #dirmodel = "medical/Super-resolution-Reconstruction/super-pd-wip/train_unet2d_adam_batch100_1psm9_ssim_loss"
+    dirmodel = "train_unet2d_adam_batch100_1psm9_ssim_loss_lr0.001_scale225"
     modelFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.h5'
     jsonFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.json'
     if len(modelFileName) == 0:
@@ -190,8 +192,8 @@ for inputTifs in inputfiles:
     if leave_one_out_train: reconFileNameSuffix = '.'.join(reconFileNameSuffix.split('.')[:-1]) + '_loo.tif'
     print('reconFileNameSuffix: ', reconFileNameSuffix)
 
-    fname = inputTifs.split('\\')[-1] #+ '_' + reconFileNameSuffix
-    print(fname)
+    fname = inputTifs.split('/')[-1] #+ '_' + reconFileNameSuffix
+    print("fname:",fname)
     reconFileName = os.path.join(dirmodel, fname)
     print('reconFileName =>', reconFileName)
     if os.path.isfile(reconFileName):  # don't overwrite existing data
@@ -228,8 +230,9 @@ for inputTifs in inputfiles:
     inputMax = np.amax(volume1)
 
     # normalize volumes to have range of 0 to 1
-    volume1 = np.float16(volume1 / np.amax(volume1))
-
+    volume1 = np.float32(volume1 / np.amax(volume1))
+    #scale = 1.0/255.0
+    #volume1 = volume1 * scale
     # reconstruct the odd numbered slices using deep learning
     print('perform deep learning reconstruction...')
     if subset_recon_mode:
@@ -243,12 +246,12 @@ for inputTifs in inputfiles:
     # create ai volume
     volume_recon_ai = np.zeros([int(stride_2d[0] * np.ceil(volume1.shape[0] / stride_2d[0])),
                                 int(stride_2d[1] * np.ceil(volume1.shape[1] / stride_2d[1])),
-                                volume1.shape[2]], dtype=np.float16)
+                                volume1.shape[2]], dtype=np.float32)
     volume1_shape_orig = volume1.shape
     npadvoxs = tuple(np.subtract(volume_recon_ai.shape, volume1_shape_orig))
     # print(npadvoxs,npadvoxs[0],npadvoxs[1],npadvoxs[2])
     volume1p = np.pad(volume1, ((0, npadvoxs[0]), (0, npadvoxs[1]), (0, npadvoxs[2])), 'edge')
-    volume_s = np.zeros([volume1p.shape[0], volume1p.shape[1], 1], dtype=np.float16)
+    volume_s = np.zeros([volume1p.shape[0], volume1p.shape[1], 1], dtype=np.float32)
     print('volume_s.shape', volume_s.shape)
     for iSlc in range(minslc, maxslc):
 
@@ -257,7 +260,7 @@ for inputTifs in inputfiles:
         # get patches for target slice that will be predicted
         patches1 = get_patches(np.squeeze(volume1p[:, :,iSlc]), blksz_2d, stride_2d)
         # create arrays to store validation set
-        xtest = np.zeros([patches1.shape[0], blksz_2d[0], blksz_2d[1], 1], dtype=np.float16)
+        xtest = np.zeros([patches1.shape[0], blksz_2d[0], blksz_2d[1], 1], dtype=np.float32)
         # save patches to test data set
         xtest[:, :, :, 0] = patches1[:, :, :]
         # delete some variables to save memory
@@ -280,7 +283,7 @@ for inputTifs in inputfiles:
         ###############################################################################
         # save deep learned slices to separate output volume
         ###############################################################################
-        volume_recon_ai[:, :, iSlc] = np.float16(dlimage)
+        volume_recon_ai[:, :, iSlc] = np.float32(dlimage)
 
         # delete some variables to save memory
         del xtest
@@ -307,7 +310,7 @@ for inputTifs in inputfiles:
     #                                                                            0))  # move slices from 3rd dimension to 1st dimension
     data_airecon = np.uint16(np.round(np.float(inputMax) / ai_max) * volume_recon_ai)
     #squeeze to 2 dims
-    data_airecon = data_airecon.squeeze()                                                                       
+    data_airecon = data_airecon.squeeze().transpose(0,2,1)                                                                       
     #tifffile.imsave(reconFileName, data_airecon, compress=6)
     print("data_airecon.shape",data_airecon.shape)
     print("\n")

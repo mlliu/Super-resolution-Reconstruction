@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 
 from unet import unet2d
 
+from keras.preprocessing.image import ImageDataGenerator
 #import tensorflow as tf
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -45,6 +46,8 @@ patches_from_volume = True  # False: patches selected from each slice; True: pat
 data_augm_factor = 1  # data augmentation factor; arbitrary values allowed for 2D
 optimizers = 'adam'  # ['adam', 'sgd']
 leave_one_out_train = False  # performs training using a leave one out scheme
+lr = 0.0001 #learning rate
+scale = 0  # scale for dataloader
 ###############################################################################
 # key parameters (end)
 # ##############################################################################
@@ -68,7 +71,7 @@ if loss_function == "mean_squared_error":
         patch_select_mode) + "_" + "mse"
 else:
     foldersuffix = '_' + str(data_augm_factor)  + 'psm' + str(
-        patch_select_mode) + "_" + loss_function
+        patch_select_mode) + "_" + loss_function + '_lr'+str(lr) +'_scale' + str(scale)
 #foldersuffix
 
 ""
@@ -127,9 +130,9 @@ try:
     srcfiles, tgtfiles = get_source_and_target_files(dirsource, dirtarget)
     srcfiles.sort()
     tgtfiles.sort()
-    #split 5 for test
-    #srcfiles=srcfiles[:-5]
-    #tgtfiles=tgtfiles[:-5]
+    #select 10 for tiny training
+    #srcfiles=srcfiles[0:5]
+    #tgtfiles=tgtfiles[0:5]
     print("srcfiles size",len(srcfiles))
     print("tgtfiles size",len(tgtfiles))
 except:
@@ -177,6 +180,7 @@ if training_needed_flag:
         stride_2d[1]) + ']' + "_psm" + str(patch_select_mode)
     
     if not os.path.exists(os.path.join(script_path, 'xtrain_master_noaug' + suffix_npy + '.npy')):
+    #if True:
         print("training data not found, so must create it")
         ###############################################################################
         # create training arrays
@@ -342,7 +346,7 @@ if training_needed_flag:
     ###############################################################################
     # compile the model
     ###############################################################################
-    opt = Adam()
+    opt = Adam(learning_rate=lr)
 
     if loss_function != 'ssim_loss':
         model.compile(loss=loss_function, optimizer=opt)
@@ -359,7 +363,14 @@ if training_needed_flag:
                                   mode='min')
     checkpoint2 = EarlyStopping(monitor='val_loss', patience=training_patience, verbose=1, mode='min')
     callbacks_list = [checkpoint1, checkpoint2]
-
+    ##############################################################################
+    #official data generator
+    ##############################################################################
+    split = int(xtrain.shape[0]*0.8)
+    
+    datagen = ImageDataGenerator(rescale=scale)
+    train_iterator = datagen.flow(xtrain[:split,:,:,:], ytrain[:split,:,:,:], batch_size=batch_size_train)
+    test_iterator = datagen.flow(xtrain[split:,:,:,:], ytrain[split:,:,:,:], batch_size=batch_size_train)
     ###############################################################################
     # fit the model
     ###############################################################################
@@ -367,6 +378,9 @@ if training_needed_flag:
     print('ytrain size: ', ytrain.shape)
     split = int(xtrain.shape[0]*0.8)
     
+    ##############################################################################
+    #own data generator
+    ##############################################################################
     def batch_generator(x, y,batch_size):
         N = len(xtrain)
         i = 0
@@ -381,8 +395,8 @@ if training_needed_flag:
     validation_data = validation_data.batch(batch_size_train)
     with tf.device('/gpu:0'):
         #history = model.fit(batch_generator(xtrain[:split,:,:,:], ytrain[:split,:,:,:],batch_size_train), steps_per_epoch = split//batch_size_train,validation_data=batch_generator(xtrain[split:,:,:,:], ytrain[split:,:,:,:],batch_size_train), validation_steps = (xtrain.shape[0]-split)//batch_size_train ,epochs=nepochs, callbacks=callbacks_list)
-        history = model.fit(batch_generator(xtrain[:split,:,:,:], ytrain[:split,:,:,:],batch_size_train), steps_per_epoch = split//batch_size_train,validation_data=validation_data,epochs=nepochs, callbacks=callbacks_list)
-        
+        #history = model.fit(batch_generator(xtrain[:split,:,:,:], ytrain[:split,:,:,:],batch_size_train), steps_per_epoch = split//batch_size_train,validation_data=validation_data,epochs=nepochs, callbacks=callbacks_list)
+        history = model.fit(train_iterator, steps_per_epoch=len(train_iterator),validation_data = test_iterator, validation_steps = len(test_iterator) ,epochs=nepochs,callbacks=callbacks_list)
         print(history.history.keys())
         print("loss: ", history.history['loss'])
         print("val_loss ", history.history['val_loss'])
