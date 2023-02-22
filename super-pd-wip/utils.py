@@ -7,7 +7,7 @@ import nibabel as nib
 #import cv2
 import numpy as np
 import scipy.ndimage as ndi
-import tensorflow as tf
+#import tensorflow as tf
 from PIL import Image
 from joblib import Parallel, delayed
 from scipy.signal import convolve2d

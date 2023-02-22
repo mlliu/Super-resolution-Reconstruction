@@ -119,8 +119,8 @@ crop_train_y = 1 #0.50 if patches_from_volume else 0.6
 ""
 ###############################################################################
 # find distinct data sets
-# ##############################################################################
-# script_path = os.path.split(os.path.abspath(__file__))[0]
+###############################################################################
+#script_path = os.path.split(os.path.abspath(__file__))[0]
 script_path =os.getcwd()
 dirtarget = os.path.join(script_path, "../../pd_wip/wip_registration_nifti/train")
 #dirsource = "data/train/CentreSquare15p25Mask"
@@ -146,7 +146,7 @@ p = patches_per_set, patches_per_set_h, patches_per_set_l if patches_from_volume
 
 ###############################################################################
 # check if we've already trained the model; if no, train it, if yes, load it from disk
-# ##############################################################################
+###############################################################################
 
 # 2D UNet
 modelsuffix = "_unet2d" + rstr + "-" + "[" + str(stride_2d[0]) + 'x' + str(
