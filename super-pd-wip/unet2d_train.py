@@ -376,7 +376,7 @@ if training_needed_flag:
     ###############################################################################
     print('xtrain size: ', xtrain.shape)
     print('ytrain size: ', ytrain.shape)
-    split = int(xtrain.shape[0]*0.8)
+    #split = int(xtrain.shape[0]*0.8)
     
     ##############################################################################
     #own data generator

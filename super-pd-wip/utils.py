@@ -74,7 +74,7 @@ def augment_patches(patchvolume, augmentfactor, seed, rotrange, shiftrange, mins
     # create augmented output variable
     output = np.zeros(
         [patchvolume.shape[0] * augmentfactor, patchvolume.shape[1], patchvolume.shape[2], patchvolume.shape[3]],
-        dtype='float16')
+        dtype='float32')
     tmp = np.zeros([patchvolume.shape[1], patchvolume.shape[2]], dtype='float32')
     # loop over patches to augment
     print("augmenting data " + str(augmentfactor) + "-fold ")
@@ -101,7 +101,7 @@ def augment_patches(patchvolume, augmentfactor, seed, rotrange, shiftrange, mins
                                               cval=0.0, prefilter=True)
                 tmp = cv2_clipped_zoom(tmp, randzoom)
 
-                tmpimg = np.float16(
+                tmpimg = np.float32(
                     ndi.interpolation.rotate(tmp, randangle, axes=(1, 0), reshape=False, output=None, order=3,
                                              mode='nearest', cval=0.0, prefilter=True))
                 output[iPatch * augmentfactor + iAug, :, :, 0] = tmpimg
@@ -128,7 +128,7 @@ def augment_patches_2p5d(patchvolume, augmentfactor, seed, rotrange, shiftrange,
     # create augmented output variable
     output = np.zeros(
         [patchvolume.shape[0] * augmentfactor, patchvolume.shape[1], patchvolume.shape[2], patchvolume.shape[3]],
-        dtype='float16')
+        dtype='float32')
     tmp = np.zeros([patchvolume.shape[1], patchvolume.shape[2], patchvolume.shape[3]], dtype='float32')
     # loop over patches to augment
     print("augmenting data " + str(augmentfactor) + "-fold ")
@@ -156,7 +156,7 @@ def augment_patches_2p5d(patchvolume, augmentfactor, seed, rotrange, shiftrange,
                 for chs in range(patchvolume.shape[3]):
                     tmp[:, :, chs] = cv2_clipped_zoom(tmp[:, :, chs], randzoom)
 
-                tmpimg = np.float16(
+                tmpimg = np.float32(
                     ndi.interpolation.rotate(tmp, randangle, axes=(1, 0), reshape=False, output=None, order=3,
                                              mode='nearest', cval=0.0, prefilter=True))
                 output[iPatch * augmentfactor + iAug, :, :, :] = tmpimg
@@ -192,12 +192,12 @@ def load_tiff_to_numpy_vol(path, submode, minslc, maxslc):
     img.load()
     # extract individual slices
     if submode:  # loading only a portion of the tiff (i.e. a subset of slices)
-        volume = np.zeros([img.height, img.width, min(maxslc, img.n_frames) - (minslc - 1)], dtype='float16')
+        volume = np.zeros([img.height, img.width, min(maxslc, img.n_frames) - (minslc - 1)], dtype='float32')
         for n in range(minslc, min(maxslc, img.n_frames)):
             img.seek(n)
             volume[:, :, n - minslc] = np.float32(np.asarray(img.copy()))
     else:  # loading the entire tiff (i.e. all slices)
-        volume = np.zeros([img.height, img.width, img.n_frames], dtype='float16')
+        volume = np.zeros([img.height, img.width, img.n_frames], dtype='float32')
         for n in range(0, img.n_frames):
             img.seek(n)
             volume[:, :, n] = np.float32(np.asarray(img.copy()))
@@ -452,7 +452,7 @@ def get_local_max_patches_from_image_unaugmented(img_target, img_source, blksz, 
     coordi = coordinates[highidx, :]
 
     # create matrix that will be returned
-    output = np.zeros([n_highsig + n_lowsig, blksz[0], blksz[1], srcslice + tgtslice], dtype='float16')
+    output = np.zeros([n_highsig + n_lowsig, blksz[0], blksz[1], srcslice + tgtslice], dtype='float32')
     if tgtslice == 1:
         img_tgt = np.squeeze(img_target[:, :])
     else:
@@ -683,7 +683,7 @@ def extract_patches_2d_centerpixels(arr, blksize, stride):
     # supports even and odd blksize values
     h = int(arr.shape[0] - (blksize[0] - stride[0])) // stride[0]
     w = int(arr.shape[1] - (blksize[1] - stride[1])) // stride[1]
-    patches = np.zeros([h * w, blksize[0], blksize[1]], dtype=np.float16)
+    patches = np.zeros([h * w, blksize[0], blksize[1]], dtype=np.float32)
     for ih in range(0, h):
         hoffset = int(stride[0] * ih)
         for iw in range(0, w):
@@ -704,7 +704,7 @@ def extract_patches_2p5d_centerpixels(arr, blksize, stride):
     # supports even and odd blksize values
     h = int(arr.shape[0] - (blksize[0] - stride[0])) // stride[0]
     w = int(arr.shape[1] - (blksize[1] - stride[1])) // stride[1]
-    patches = np.zeros([h * w, blksize[0], blksize[1], numch], dtype=np.float16)
+    patches = np.zeros([h * w, blksize[0], blksize[1], numch], dtype=np.float32)
     for ih in range(0, h):
         hoffset = int(stride[0] * ih)
         for iw in range(0, w):
@@ -769,13 +769,13 @@ def reconstruct_from_patches_2d_centerpixels(patch, image_size, stride, edgeblur
         weightimg[np.where(weightimg <= 0)] = 1
         reconimg = np.divide(reconimg,
                              weightimg)  # divide the reconstructed image by the weighting image to equalize signal across the image prior to returning it
-        reconimg = np.float16(reconimg)  # convert back to float16 before returning
+        reconimg = np.float32(reconimg)  # convert back to float16 before returning
     else:  # standard block by block recon without blurring of edge pixels
         hoffsettoedgeofpatchcenter = patch.shape[1] // 2 - stride[
             0] // 2  # vertical   offset from edge of incoming patch to edge of center region being reconstructed
         woffsettoedgeofpatchcenter = patch.shape[2] // 2 - stride[
             1] // 2  # horizontal offset from edge of incoming patch to edge of center region being reconstructed
-        reconimg = np.zeros([image_size[0], image_size[1]], dtype=np.float16)
+        reconimg = np.zeros([image_size[0], image_size[1]], dtype=np.float32)
         for ih in range(0, h):
             hoffset = int(
                 ih * stride[0]) + hoffsettoedgeofpatchcenter  # vertical   offset into final reconstructed image
@@ -1047,7 +1047,8 @@ def get_top_block_locations(volume, blksz_tuple, stride_tuple, n_larger, seed, n
         sys.exit("number of regions is 0, quit!")
     if n_lower > 0:  # select at random
         np.random.seed(seed)
-        indx_low = np.random.randint(low=1, high=n_volx * n_voly * n_volz, size=n_lower)
+        #indx_low = np.random.randint(low=1, high=n_volx * n_voly * n_volz, size=n_lower)
+        indx_low = np.random.randint(low=1, high=n_volx * n_voly * n_volz, size=n_lower+n_larger-len(blk_sum_tmp.ravel()))
         indx_ravel = np.concatenate((indx_ravel, indx_low))
     print('in get_top_block_locations, n_lower  & indx_ravel.shape: ', n_lower, indx_ravel.shape)
     return indx_ravel, n_volx, n_voly, n_volz, xmini, ymini, zmini
