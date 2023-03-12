@@ -9,6 +9,7 @@ from models import *
 from utils import *
 import matplotlib.pyplot as plt
 from keras.preprocessing.image import ImageDataGenerator
+from DataGenerator import DataGenerator
 #import tensorflow as tf
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -17,7 +18,7 @@ key simulation parameters (begin)
 ##############################################################################
 """
 #combomatrix = [8, 8, 8, 4, 4, 4, 9, 10000, 10000, 8, False]
-combomatrix = [128, 128, 64, 64, 64, 32, 9, 100, 100, 64, False]
+combomatrix = [128, 128, 64, 64, 64, 32, 9, 32, 0, 8, False]
 '''
  in form [blksz_3d[0],           block size in row direction (pixel units)
              blksz_3d[1],           block size in column direction (pixel units)
@@ -47,6 +48,7 @@ data_augm_factor = 1  # 1, 2, 4, or 8 are options for residual net
 optimizers = 'adam'  # ['adam', 'sgd']
 leave_one_out_train = False  # performs training using a leave one out scheme
 lr = 0.0001 #learning rate
+scale = 0  # scale for dataloader
 ###############################################################################
 # key simulation parameters (end)
 # ##############################################################################
@@ -78,7 +80,7 @@ else:
 
 #for optim in optimizers:  # loop through optimizers
 nepochs = 2 if testmode_epochs else 200  # number of epochs to train for
-batch_size_train = 20 #if b_index[0] == 32 else 32 // b_index[0] * 20
+batch_size_train = 12 #if b_index[0] == 32 else 32 // b_index[0] * 20
 
 blksz_3d = combomatrix[0], combomatrix[1], combomatrix[2]  # block size in pixels that is used to train the model
 stride_3d = combomatrix[3], combomatrix[4], combomatrix[5]  # stride size in pixels that is used to train the model
@@ -121,8 +123,8 @@ try:
     srcfiles.sort()
     tgtfiles.sort()
     #select 10 for tiny training
-    #srcfiles=srcfiles[0:5]
-    #tgtfiles=tgtfiles[0:5]
+    srcfiles=srcfiles[0:100]
+    tgtfiles=tgtfiles[0:100]
     print("srcfiles size",len(srcfiles))
     print("tgtfiles size",len(tgtfiles))
 except:
@@ -154,18 +156,18 @@ training_needed_flag = should_we_train_network(
 
 if training_needed_flag:
     print("model not found for sets", " so must train it")
-                ###############################################################################
-# create training data if not already created
-                ###############################################################################
+    ###############################################################################
+    # create training data if not already created
+    ###############################################################################
     suffix_npy = "_unet3d" + rstr + "_3dto3d_" + str(blksz_3d[0]) + "x" + str(blksz_3d[1]) + "x" + str(
         blksz_3d[2]) + "_" + str(patches_per_set) + "(" + str(patches_per_set_h) + ")(" + str(
         patches_per_set_l) + ")"  + "_psm" + str(
         patch_select_mode)
     if not os.path.exists(os.path.join(script_path, 'xtrain_master_noaug' + suffix_npy + '.npy')):
         print("training data not found, so must create it")
-                    ###############################################################################
-#create training arrays
-                    ###############################################################################
+        ###############################################################################
+        #create training arrays
+        ###############################################################################
         totalpatches = len(srcfiles) * patches_per_set
 
         xtrain_master_noaug = np.zeros([totalpatches, blksz_3d[0], blksz_3d[1], input_ch, 1],
@@ -175,16 +177,16 @@ if training_needed_flag:
 
                     # count the number of total slices to learn from during training phase (i.e. loop through all data sets except the one that is being reconstructed)
         slice_count = 0  # counter holding number of slices incorporated into training
-                    ###############################################################################
+        ###############################################################################
         # load .npy files from disk, display central coronal slice, and fill xtrain and ytrain matrices
-                    ###############################################################################
+        ###############################################################################
         slices_per_file = []  # recording the number of slices used for training data extractions
         if proj_direction > 0:
             n_slices_exclude = n_edge_after_proj
 
         for m, icode in enumerate(srcfiles):  # loop over volumes to train from
-            print('##############################################')
-            print('pd file is =>', icode)
+            #print('##############################################')
+            #print('pd file is =>', icode)
             ###################################
             # load numpy arrays, reproject dataset (if needed) and trim and normalize dataset,
             ###################################
@@ -192,14 +194,16 @@ if training_needed_flag:
                                                                 crop_train_y, blksz_3d[:2], proj_direction,
                                                                 subset_train_mode, subset_train_minslc,
                                                                 subset_train_maxslc)
-
-            print('wid is =>', tgtfiles[m])
+            
+            volume1 = volume1[:,:,n_slices_exclude:-n_slices_exclude]
+            #print('wid is =>', tgtfiles[m])
             volume3, volume3max = load_tiff_volume_and_scale_si(dirtarget, tgtfiles[m], crop_train_x,
                                                                 crop_train_y, blksz_3d[:2], proj_direction,
                                                                 subset_train_mode, subset_train_minslc,
                                                                 subset_train_maxslc)
-
-            print('creating training data set...')
+            volume3 = volume3[:,:,n_slices_exclude:-n_slices_exclude]
+            #print("volume1.shape: ",volume1.shape)
+            #print('creating training data set...')
             # prepare training data for 3D Unet or 3D Residual net
             # 3D Unet
             # create metric volume used to select blocks
@@ -230,20 +234,20 @@ if training_needed_flag:
                                                                metric_operator=metric_operator,
                                                                nregions=nregions,
                                                                return_bvm=True)
-            print(np.amax(blockvolmap), np.amin(blockvolmap))
-            blockvolmap = np.uint16(np.round(
-                np.float(volume3max / np.amax(blockvolmap)) * np.moveaxis(blockvolmap, -1,
-                                                                          0)))  # move slices from 3rd dimension to 1st dimension
-            tifffile.imsave(
-                'blockvolmap' + suffix_npy + '_' + str(m) + "_" + str(nregions) + "regions.tiff",
-                blockvolmap, compress=6)
+            #print(np.amax(blockvolmap), np.amin(blockvolmap))
+            #blockvolmap = np.uint16(np.round(
+            #    np.float(volume3max / np.amax(blockvolmap)) * np.moveaxis(blockvolmap, -1,
+            #                                                              0)))  # move slices from 3rd dimension to 1st dimension
+            #tifffile.imsave(
+            #    'blockvolmap' + suffix_npy + '_' + str(m) + "_" + str(nregions) + "regions.tiff",
+            #    blockvolmap, compress=6)
             slices_per_file.append(patches_per_set)
-            print('train data fitted: m, m*patches_per_set:(m+1)*patches_per_set: ', m, m * patches_per_set,
-                  (m + 1) * patches_per_set)
+            #print('train data fitted: m, m*patches_per_set:(m+1)*patches_per_set: ', m, m * patches_per_set,
+            #      (m + 1) * patches_per_set)
 
-            if m == (len(srcfiles) - 1):  # if last volume, save the training data to disk
-                np.save(os.path.join(script_path, 'xtrain_master_noaug' + suffix_npy), xtrain_master_noaug)
-                np.save(os.path.join(script_path, 'ytrain_master_noaug' + suffix_npy), ytrain_master_noaug)
+            #if m == (len(srcfiles) - 1):  # if last volume, save the training data to disk
+            #    np.save(os.path.join(script_path, 'xtrain_master_noaug' + suffix_npy), xtrain_master_noaug)
+            #    np.save(os.path.join(script_path, 'ytrain_master_noaug' + suffix_npy), ytrain_master_noaug)
 
         print('total files read for training: ', len(srcfiles))
         print('total slices read for training: ', slice_count)
@@ -278,12 +282,14 @@ if training_needed_flag:
         xtrain_master = np.concatenate((xtrain_master, np.flip(xtrain_master, axis=3)))  # flip over (z)
         ytrain_master = np.concatenate((ytrain_master, np.flip(ytrain_master, axis=3)))
     else:  # no augmentation
-        ytrain_master = np.copy(ytrain_master_noaug)
-        xtrain_master = np.copy(xtrain_master_noaug)
+        #ytrain_master = np.copy(ytrain_master_noaug)
+        #xtrain_master = np.copy(xtrain_master_noaug)
+        ytrain_master = ytrain_master_noaug
+        xtrain_master = xtrain_master_noaug
 
     shape_xtrain_master_noaug = xtrain_master_noaug.shape
-    del ytrain_master_noaug
-    del xtrain_master_noaug
+    #del ytrain_master_noaug
+    #del xtrain_master_noaug
 
     ###############################################################################
     # define model and print summary
@@ -291,12 +297,15 @@ if training_needed_flag:
 
     n_loo_loops = 1  # only one network is trained for all data sets
 
-    inds_all = np.arange(0, xtrain_master.shape[0] * data_augm_factor)
-
-    print('using all data to train network')
+    #inds_all = np.arange(0, xtrain_master.shape[0] * data_augm_factor)
+    split = int(xtrain_master.shape[0]*0.8)
+    inds_all = np.arange(0, split)
+    print('use 80% for training, 20% for testing')
     inds_to_train_from = np.copy(inds_all)
-    xtrain = np.copy(xtrain_master[inds_to_train_from, :, :, :])
-    ytrain = np.copy(ytrain_master[inds_to_train_from, :, :, :])
+    xtrain = xtrain_master[inds_to_train_from, :, :, :]
+    ytrain = ytrain_master[inds_to_train_from, :, :, :]
+    xtest = xtrain_master[split:,:,:,:]
+    ytest = ytrain_master[split:,:,:,:]
 
     ###############################################################################
     # define model and print summary
@@ -347,10 +356,12 @@ if training_needed_flag:
     ##############################################################################
     split = int(xtrain.shape[0]*0.8)
     
-    datagen = ImageDataGenerator(rescale=scale)
-    train_iterator = datagen.flow(xtrain[:split,:,:,:], ytrain[:split,:,:,:], batch_size=batch_size_train)
-    test_iterator = datagen.flow(xtrain[split:,:,:,:], ytrain[split:,:,:,:], batch_size=batch_size_train)
+    #datagen = ImageDataGenerator(rescale=scale)
+    #train_iterator = datagen.flow(xtrain[:split,:,:,:,:], ytrain[:split,:,:,:,:], batch_size=batch_size_train)
+    #test_iterator = datagen.flow(xtrain[split:,:,:,:,:], ytrain[split:,:,:,:,:], batch_size=batch_size_train)
     ###############################################################################
+    train_iterator = DataGenerator(xtrain, ytrain, batch_size=batch_size_train)
+    test_iterator = DataGenerator(xtest, ytest, batch_size=batch_size_train)
     # fit the model
     ###############################################################################
     print('xtrain size: ', xtrain.shape)

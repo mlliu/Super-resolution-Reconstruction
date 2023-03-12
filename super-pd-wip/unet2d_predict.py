@@ -1,4 +1,4 @@
-import tifffile
+#import tifffile
 from keras.models import model_from_json
 
 from utils import *
@@ -8,6 +8,7 @@ key parameters (begin)
 ##############################################################################
 """
 combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
+#combomatrix = [256, 208, 320, 320, 9, 60, 60, 8, False]
 '''
  in form [blksz_2d[0],           patch size in row direction (pixel units)
              blksz_2d[1],           patch size in column direction (pixel units)
@@ -31,6 +32,9 @@ data_augm_factor = 1 # data augmentation factor
 patches_from_volume = True  # 0: patches selected from each slice; 1: patches selected from each whole dataset
 optimizers = 'adam'  # ['adam', 'sgd']
 leave_one_out_train = False  # performs training using a leave one out scheme
+
+crop_train_x = 0.8 #0.50 if patches_from_volume else 1
+crop_train_y = 0.3 #0.50 if patches_from_volume else 0.6
 ###############################################################################
 # key parameters (end)
 # ##############################################################################
@@ -128,7 +132,7 @@ print(outpath)
 #if not os.path.exists(dirmodel):
 #    sys.exit("error - ", dirmodel, "doesn't exist, so can't predict")
 #dirinput = os.path.join(script_path, "../data/test/low_res")#os.path.join(script_path, 'input_low_res_' + reduction)
-dirinput = os.path.join(script_path, "../../pd_wip/pd_nifti_final/test")
+dirinput = os.path.join(script_path, "../../pd_wip/pd_nifti_final/test16")
 model_to_apply = modelprefix
 
 ####################################
@@ -171,7 +175,7 @@ for inputTifs in inputfiles:
     #                                                       leave_one_out_train, datasetnumber, stride_2d,
     #                                                       extraconfigstring)
     #dirmodel = "medical/Super-resolution-Reconstruction/super-pd-wip/train_unet2d_adam_batch100_1psm9_ssim_loss"
-    dirmodel = "train_unet2d_adam_batch100_1psm9_ssim_loss_lr0.001_scale225"
+    dirmodel = "train_unet2d_adam_batch100_1psm9_ssim_loss_lr0.0001_scale0"
     modelFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.h5'
     jsonFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.json'
     if len(modelFileName) == 0:
@@ -187,7 +191,7 @@ for inputTifs in inputfiles:
     reconFileNameSuffix = reconFileNameSuffix.split('/')[-1]
     reconFileNameSuffix = inputTifs
     if parallel_recon:               reconFileNameSuffix = '.'.join(
-        reconFileNameSuffix.split('.')[:-1]) + '_parallel.nii.gz'
+        reconFileNameSuffix.split('.')[:-1]) + '_parallel.nii.gz'  
     if blks_rand_shift_mode:        reconFileNameSuffix = '.'.join(
         reconFileNameSuffix.split('.')[:-1]) + '_rsb.nii.gz'
     if leave_one_out_train: reconFileNameSuffix = '.'.join(reconFileNameSuffix.split('.')[:-1]) + '_loo.tif'
@@ -220,6 +224,7 @@ for inputTifs in inputfiles:
     # load tiff from disk for reconstruction
     ########################################
     volume1 = load_gz_to_numpy_vol(inputTifs, subset_recon_mode, subset_recon_minslc, subset_recon_maxslc)
+    #volume1 = crop_for_artery(volume1,crop_train_x,crop_train_y)
     # adjust size to reduce computation load
     # adjust x and y dimensions of volume to divide evenly into blksz_2d
     #volume1 = crop_volume_in_xy_and_reproject_2D(volume1, crop_recon_x, crop_recon_y, blksz_2d, proj_direction)

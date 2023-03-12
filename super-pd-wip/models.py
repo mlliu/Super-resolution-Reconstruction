@@ -2,7 +2,12 @@ import numpy as np
 from keras.layers import Conv2D, Concatenate, Conv3D, MaxPooling3D, Conv3DTranspose
 from keras.layers import UpSampling3D, Dropout, BatchNormalization, Activation
 #from keras.models import Input, Model
-from tensorflow.python.keras.models import Input, Model
+#from tensorflow.python.keras.models import Input, Model
+
+
+from keras import Input
+from keras.models import Model
+
 
 
 # 3D U-Net
