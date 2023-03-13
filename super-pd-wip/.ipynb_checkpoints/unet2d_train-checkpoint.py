@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 from unet import unet2d
 
 from keras.preprocessing.image import ImageDataGenerator
+from DataGenerator import DataGenerator
 #import tensorflow as tf
 print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
@@ -19,8 +20,8 @@ print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 key parameters (begin)
 ##############################################################################
 """
-
 combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
+#combomatrix = [256, 208, 320, 320, 9, 60, 60, 8, False]
 '''
  in form [blksz_2d[0],           patch size in row direction (pixel units)
              blksz_2d[1],           patch size in column direction (pixel units)
@@ -113,8 +114,8 @@ subset_train_minslc = 1  # training subset mode - minimum slice
 subset_train_maxslc = 500  # training subset mode - maximum slice
 
 # factor for additional in-plane (i.e. x and y) cropping of volumes during training phase
-crop_train_x = 1 #0.50 if patches_from_volume else 1
-crop_train_y = 1 #0.50 if patches_from_volume else 0.6
+crop_train_x = 0.8 #0.50 if patches_from_volume else 1
+crop_train_y = 0.3 #0.50 if patches_from_volume else 0.6
 
 ""
 ###############################################################################
@@ -122,9 +123,9 @@ crop_train_y = 1 #0.50 if patches_from_volume else 0.6
 ###############################################################################
 #script_path = os.path.split(os.path.abspath(__file__))[0]
 script_path =os.getcwd()
-dirtarget = os.path.join(script_path, "../../pd_wip/wip_registration_nifti/train")
+dirtarget = os.path.join(script_path, "../../pd_wip/wip_registration_nifti/train16")
 #dirsource = "data/train/CentreSquare15p25Mask"
-dirsource = os.path.join(script_path, "../../pd_wip/pd_nifti_final/train")
+dirsource = os.path.join(script_path, "../../pd_wip/pd_nifti_final/train16")
 #dirtarget = "data/train/anat1"
 try:
     srcfiles, tgtfiles = get_source_and_target_files(dirsource, dirtarget)
@@ -217,11 +218,13 @@ if training_needed_flag:
                                                                 crop_train_y, blksz_2d, proj_direction,
                                                                 subset_train_mode, subset_train_minslc,
                                                                 subset_train_maxslc)
+            #volume1 = crop_for_artery(volume1,crop_train_x,crop_train_y)
             print('wid is =>', tgtfiles[m])
             volume3, volume3max = load_tiff_volume_and_scale_si(dirtarget, tgtfiles[m], crop_train_x,
                                                                 crop_train_y, blksz_2d, proj_direction,
                                                                 subset_train_mode, subset_train_minslc,
                                                                 subset_train_maxslc)
+            #volume3 = crop_for_artery(volume3,crop_train_x,crop_train_y)
             
             print('creating training data set...')
             #if patches_from_volume:  # select patches from each whole dataset
@@ -323,14 +326,16 @@ if training_needed_flag:
     #    if set_to_train > 0:
     #        continue
 
+    split = int(xtrain_master.shape[0]*0.8)
+    inds_all = np.arange(0, split)
 
-    inds_all = np.arange(0, xtrain_master.shape[0])
-
-    print('using all data to train network')
+    #print('using all data to train network')
+    print('use 80% for training, 20% for testing')
     inds_to_train_from = np.copy(inds_all)
     xtrain = xtrain_master[inds_to_train_from, :, :, :]
     ytrain = ytrain_master[inds_to_train_from, :, :, :]
-
+    xtest = xtrain_master[split:,:,:,:]
+    ytest = ytrain_master[split:,:,:,:]
     ###############################################################################
     # define model and print summary
     ###############################################################################
@@ -368,9 +373,9 @@ if training_needed_flag:
     ##############################################################################
     split = int(xtrain.shape[0]*0.8)
     
-    datagen = ImageDataGenerator(rescale=scale)
-    train_iterator = datagen.flow(xtrain[:split,:,:,:], ytrain[:split,:,:,:], batch_size=batch_size_train)
-    test_iterator = datagen.flow(xtrain[split:,:,:,:], ytrain[split:,:,:,:], batch_size=batch_size_train)
+    #datagen = ImageDataGenerator(rescale=scale)
+    #train_iterator = datagen.flow(xtrain[:split,:,:,:], ytrain[:split,:,:,:], batch_size=batch_size_train)
+    #test_iterator = datagen.flow(xtrain[split:,:,:,:], ytrain[split:,:,:,:], batch_size=batch_size_train)
     ###############################################################################
     # fit the model
     ###############################################################################
@@ -381,18 +386,21 @@ if training_needed_flag:
     ##############################################################################
     #own data generator
     ##############################################################################
-    def batch_generator(x, y,batch_size):
-        N = len(xtrain)
-        i = 0
-        while True:
-            yield x[i:i+batch_size,:,:,:], y[i:i+batch_size,:,:,:]
-            i = i+batch_size
-            if i+batch_size  > N:
-                i=0
+    train_iterator = DataGenerator(xtrain, ytrain, batch_size=batch_size_train)
+    test_iterator = DataGenerator(xtest, ytest, batch_size=batch_size_train)
+    
+    #def batch_generator(x, y,batch_size):
+    #    N = len(xtrain)
+    #    i = 0
+    #    while True:
+    #        yield x[i:i+batch_size,:,:,:], y[i:i+batch_size,:,:,:]
+    #        i = i+batch_size
+    #        if i+batch_size  > N:
+    #            i=0
     #train_dataset = tf.data.Dataset.from_tensor_slices((xtrain[:split,:,:,:], ytrain[:split,:,:,:]))
     #train_dataset = train_dataset.shuffle(buffer_size=1024).batch(batch_size_train)
-    validation_data = tf.data.Dataset.from_tensor_slices((xtrain[split:,:,:,:], ytrain[split:,:,:,:]))
-    validation_data = validation_data.batch(batch_size_train)
+    #validation_data = tf.data.Dataset.from_tensor_slices((xtrain[split:,:,:,:], ytrain[split:,:,:,:]))
+    #validation_data = validation_data.batch(batch_size_train)
     with tf.device('/gpu:0'):
         #history = model.fit(batch_generator(xtrain[:split,:,:,:], ytrain[:split,:,:,:],batch_size_train), steps_per_epoch = split//batch_size_train,validation_data=batch_generator(xtrain[split:,:,:,:], ytrain[split:,:,:,:],batch_size_train), validation_steps = (xtrain.shape[0]-split)//batch_size_train ,epochs=nepochs, callbacks=callbacks_list)
         #history = model.fit(batch_generator(xtrain[:split,:,:,:], ytrain[:split,:,:,:],batch_size_train), steps_per_epoch = split//batch_size_train,validation_data=validation_data,epochs=nepochs, callbacks=callbacks_list)

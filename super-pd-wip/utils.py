@@ -7,7 +7,7 @@ import nibabel as nib
 #import cv2
 import numpy as np
 import scipy.ndimage as ndi
-#import tensorflow as tf
+import tensorflow as tf
 from PIL import Image
 from joblib import Parallel, delayed
 from scipy.signal import convolve2d
@@ -292,9 +292,9 @@ def load_tiff_volume_and_scale_si(in_dir, in_fname, crop_x, crop_y, blksz, proj_
     #                             subset_train_maxslc)
     vol = load_gz_to_numpy_vol(os.path.join(in_dir, in_fname), subset_train_mode, subset_train_minslc,
                                  subset_train_maxslc)
-    print("volume's shape",vol.shape)
-    elapsed = time.time() - t
-    print('total time to load source tiff was', elapsed, 'seconds')
+    #print("volume's shape",vol.shape)
+    #elapsed = time.time() - t
+    #print('total time to load source tiff was', elapsed, 'seconds')
     # adjust x and y dimensions of volume to divide evenly into blksz
     # while cropping using 'crop_train' to increase speed and avoid non-pertinent regions
     t = time.time()
@@ -303,16 +303,25 @@ def load_tiff_volume_and_scale_si(in_dir, in_fname, crop_x, crop_y, blksz, proj_
     if len(np.argwhere(np.isinf(vol))) > 0:
         for xyz in np.argwhere(np.isinf(vol)):
             vol[xyz[0], xyz[1], xyz[2]] = 0
-    print('max signal value is', np.amax(vol))
-    print('min signal value is', np.amin(vol))
+    #print('max signal value is', np.amax(vol))
+    #print('min signal value is', np.amin(vol))
     # normalize volumes to have range of 0 to 1
     maxsi = np.amax(vol)
     vol = np.float32(vol / np.amax(vol))  # volume1 is source
     elapsed = time.time() - t
-    print('total time to convert to float32 and replace undefined values was', elapsed, 'seconds')
+    #print('total time to convert to float32 and replace undefined values was', elapsed, 'seconds')
     return vol, maxsi
 
-
+def crop_for_artery(vol,cropfactor_x,cropfactor_y):
+    #cropfactor_x = 0.8
+    #cropfactor_y = 0.3
+    xcropspan = int(vol.shape[0] * cropfactor_x) 
+    ycropspan = int(vol.shape[1] * cropfactor_y) 
+    xcropmini = int((vol.shape[0] - xcropspan) / 2)
+    ycropmini = int((vol.shape[1] - ycropspan) / 2)
+    #print(xcropmini,xcropspan,ycropmini,ycropspan)
+    crop_vol = vol[xcropmini:xcropmini + xcropspan, ycropmini:, :]
+    return crop_vol
 # +
 # helper function that crops (in the x and y directions) and then reprojects the volume
 def crop_volume_in_xy_and_reproject(volume, cropfactor_x, cropfactor_y, blksz, proj_direction):
@@ -1045,7 +1054,7 @@ def get_top_block_locations(volume, blksz_tuple, stride_tuple, n_larger, seed, n
         indx_ravel = np.asarray(good_indx)
     else:
         sys.exit("number of regions is 0, quit!")
-    if n_lower > 0:  # select at random
+    if n_lower >= 0:  # select at random
         np.random.seed(seed)
         #indx_low = np.random.randint(low=1, high=n_volx * n_voly * n_volz, size=n_lower)
         indx_low = np.random.randint(low=1, high=n_volx * n_voly * n_volz, size=n_lower+n_larger-len(blk_sum_tmp.ravel()))
