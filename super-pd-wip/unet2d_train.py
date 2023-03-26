@@ -20,8 +20,8 @@ print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 key parameters (begin)
 ##############################################################################
 """
-combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
-#combomatrix = [256, 208, 320, 320, 9, 60, 60, 8, False]
+#combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
+combomatrix = [192, 192, 320, 320, 9, 60, 60, 8, False] #208
 '''
  in form [blksz_2d[0],           patch size in row direction (pixel units)
              blksz_2d[1],           patch size in column direction (pixel units)
@@ -77,7 +77,7 @@ else:
 
 ""
 nepochs = 2 if testmode_epochs else 200  # number of epochs to train for
-batch_size_train = 100  # training batch size
+batch_size_train = 128  # training batch size
 
 blksz_2d = combomatrix[0], combomatrix[1]   # block/patch size in pixels
 stride_2d = combomatrix[2], combomatrix[3]  # stride for obtaining training blocks
@@ -114,8 +114,8 @@ subset_train_minslc = 1  # training subset mode - minimum slice
 subset_train_maxslc = 500  # training subset mode - maximum slice
 
 # factor for additional in-plane (i.e. x and y) cropping of volumes during training phase
-crop_train_x = 0.8 #0.50 if patches_from_volume else 1
-crop_train_y = 0.3 #0.50 if patches_from_volume else 0.6
+crop_train_x = 0.6 #0.50 if patches_from_volume else 1
+crop_train_y = 0.2 #0.50 if patches_from_volume else 0.6
 
 ""
 ###############################################################################
@@ -218,13 +218,13 @@ if training_needed_flag:
                                                                 crop_train_y, blksz_2d, proj_direction,
                                                                 subset_train_mode, subset_train_minslc,
                                                                 subset_train_maxslc)
-            #volume1 = crop_for_artery(volume1,crop_train_x,crop_train_y)
+            volume1 = crop_for_artery(volume1,crop_train_x,crop_train_y)
             print('wid is =>', tgtfiles[m])
             volume3, volume3max = load_tiff_volume_and_scale_si(dirtarget, tgtfiles[m], crop_train_x,
                                                                 crop_train_y, blksz_2d, proj_direction,
                                                                 subset_train_mode, subset_train_minslc,
                                                                 subset_train_maxslc)
-            #volume3 = crop_for_artery(volume3,crop_train_x,crop_train_y)
+            volume3 = crop_for_artery(volume3,crop_train_x,crop_train_y)
             
             print('creating training data set...')
             #if patches_from_volume:  # select patches from each whole dataset
