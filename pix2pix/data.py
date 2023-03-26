@@ -12,9 +12,9 @@ def get_dataset():
 
     #return DatasetFromFolder(train_dir, direction)
     script_path =os.getcwd()
-    dirtarget = os.path.join(script_path, "../../ARIC/pd_wip/wip_registration_nifti/train")
+    dirtarget = os.path.join(script_path, "../../pd_wip/wip_registration_nifti/train")
     #dirsource = "data/train/CentreSquare15p25Mask"
-    dirsource = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final/train")
+    dirsource = os.path.join(script_path, "../../pd_wip/pd_nifti_final/train")
     #dirtarget = "data/train/anat1"
     n_slices_exclude = 4
     patches_per_set =120
@@ -27,8 +27,8 @@ def get_dataset():
             srcfiles.sort()
             tgtfiles.sort()
             #select 10 for tiny training
-            srcfiles=srcfiles[0:5]
-            tgtfiles=tgtfiles[0:5]
+            #srcfiles=srcfiles[0:5]
+            #tgtfiles=tgtfiles[0:5]
             print("srcfiles size",len(srcfiles))
             print("tgtfiles size",len(tgtfiles))
         except:
@@ -183,8 +183,8 @@ class MRIDataset(Dataset):
             transform (callable, optional): Optional transform to be applied
                 on a sample.
         """
-        self.y = y #(total,128,128,64,1)
-        self.x = x #(total,128,128,64,1)
+        self.y = y.transpose(0,3,1,2) #(600,320,320,1)--> (N, C_in, H, W) (600,1,320,320)
+        self.x = x.transpose(0,3,1,2) #(600,320,320,1)
 
     def __len__(self):
         return len(self.x)

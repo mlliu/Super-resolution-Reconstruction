@@ -313,8 +313,8 @@ def load_tiff_volume_and_scale_si(in_dir, in_fname, crop_x, crop_y, blksz, proj_
     return vol, maxsi
 
 def crop_for_artery(vol,cropfactor_x,cropfactor_y):
-    #cropfactor_x = 0.8
-    #cropfactor_y = 0.3
+    #cropfactor_x = 0.6
+    #cropfactor_y = 0.2
     xcropspan = int(vol.shape[0] * cropfactor_x) 
     ycropspan = int(vol.shape[1] * cropfactor_y) 
     xcropmini = int((vol.shape[0] - xcropspan) / 2)

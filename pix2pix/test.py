@@ -18,7 +18,7 @@ print(opt)
 
 device = torch.device("cuda:0" if opt.cuda else "cpu")
 
-model_path = "checkpoint/{}/netG_model_epoch_{}.pth".format(opt.dataset, opt.nepochs)
+model_path = "checkpoint/netG_model_epoch_{}.pth".format(opt.nepochs)
 
 net_g = torch.load(model_path).to(device)
 

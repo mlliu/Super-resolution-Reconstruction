@@ -7,8 +7,8 @@ from utils import *
 key parameters (begin)
 ##############################################################################
 """
-combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
-#combomatrix = [256, 208, 320, 320, 9, 60, 60, 8, False]
+#combomatrix = [320, 320, 320, 320, 9, 60, 60, 8, False]
+combomatrix = [192, 192, 320, 320, 9, 60, 60, 8, False]
 '''
  in form [blksz_2d[0],           patch size in row direction (pixel units)
              blksz_2d[1],           patch size in column direction (pixel units)
@@ -33,8 +33,8 @@ patches_from_volume = True  # 0: patches selected from each slice; 1: patches se
 optimizers = 'adam'  # ['adam', 'sgd']
 leave_one_out_train = False  # performs training using a leave one out scheme
 
-crop_train_x = 0.8 #0.50 if patches_from_volume else 1
-crop_train_y = 0.3 #0.50 if patches_from_volume else 0.6
+crop_train_x = 0.6 #0.50 if patches_from_volume else 1
+crop_train_y = 0.2 #0.50 if patches_from_volume else 0.6
 ###############################################################################
 # key parameters (end)
 # ##############################################################################
@@ -175,9 +175,9 @@ for inputTifs in inputfiles:
     #                                                       leave_one_out_train, datasetnumber, stride_2d,
     #                                                       extraconfigstring)
     #dirmodel = "medical/Super-resolution-Reconstruction/super-pd-wip/train_unet2d_adam_batch100_1psm9_ssim_loss"
-    dirmodel = "train_unet2d_adam_batch100_1psm9_ssim_loss_lr0.0001_scale0"
-    modelFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.h5'
-    jsonFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.json'
+    dirmodel = "train_unet2d_adam_batch128_1psm9_ssim_loss_lr0.0001_scale0"
+    modelFileName = 'model_192x192x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch128.h5'
+    jsonFileName = 'model_192x192x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch128.json'
     if len(modelFileName) == 0:
         print('could not find model for', inputfiles, 'so skip')
         continue
@@ -224,7 +224,7 @@ for inputTifs in inputfiles:
     # load tiff from disk for reconstruction
     ########################################
     volume1 = load_gz_to_numpy_vol(inputTifs, subset_recon_mode, subset_recon_minslc, subset_recon_maxslc)
-    #volume1 = crop_for_artery(volume1,crop_train_x,crop_train_y)
+    volume1 = crop_for_artery(volume1,crop_train_x,crop_train_y)
     # adjust size to reduce computation load
     # adjust x and y dimensions of volume to divide evenly into blksz_2d
     #volume1 = crop_volume_in_xy_and_reproject_2D(volume1, crop_recon_x, crop_recon_y, blksz_2d, proj_direction)

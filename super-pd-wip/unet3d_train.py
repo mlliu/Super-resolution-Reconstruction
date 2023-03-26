@@ -123,8 +123,8 @@ try:
     srcfiles.sort()
     tgtfiles.sort()
     #select 10 for tiny training
-    srcfiles=srcfiles[0:100]
-    tgtfiles=tgtfiles[0:100]
+    srcfiles=srcfiles[0:200]
+    tgtfiles=tgtfiles[0:200]
     print("srcfiles size",len(srcfiles))
     print("tgtfiles size",len(tgtfiles))
 except:
@@ -270,6 +270,7 @@ if training_needed_flag:
     ###############################################################################
     #  flip the data in y, x, an z directions, augmenting by factors of 2, 4, or 8
     ###############################################################################
+    '''
     if data_augm_factor >= 2:
         xtrain_master = np.concatenate(
             (xtrain_master_noaug, np.flip(xtrain_master_noaug, axis=1)))  # flip vertically (y)
@@ -286,7 +287,7 @@ if training_needed_flag:
         #xtrain_master = np.copy(xtrain_master_noaug)
         ytrain_master = ytrain_master_noaug
         xtrain_master = xtrain_master_noaug
-
+    '''
     shape_xtrain_master_noaug = xtrain_master_noaug.shape
     #del ytrain_master_noaug
     #del xtrain_master_noaug
@@ -298,14 +299,14 @@ if training_needed_flag:
     n_loo_loops = 1  # only one network is trained for all data sets
 
     #inds_all = np.arange(0, xtrain_master.shape[0] * data_augm_factor)
-    split = int(xtrain_master.shape[0]*0.8)
-    inds_all = np.arange(0, split)
+    split = int(xtrain_master_noaug.shape[0]*0.8)
+    #inds_all = np.arange(0, split)
     print('use 80% for training, 20% for testing')
-    inds_to_train_from = np.copy(inds_all)
-    xtrain = xtrain_master[inds_to_train_from, :, :, :]
-    ytrain = ytrain_master[inds_to_train_from, :, :, :]
-    xtest = xtrain_master[split:,:,:,:]
-    ytest = ytrain_master[split:,:,:,:]
+    #inds_to_train_from = np.copy(inds_all)
+    xtrain = xtrain_master_noaug[:split, :, :, :]
+    ytrain = ytrain_master_noaug[:split, :, :, :]
+    xtest = xtrain_master_noaug[split:,:,:,:]
+    ytest = ytrain_master_noaug[split:,:,:,:]
 
     ###############################################################################
     # define model and print summary
@@ -402,18 +403,20 @@ if training_needed_flag:
         ###############################################################################
         model_json = model.to_json()
         with open(os.path.join(dirmodel,
-                               modelprefix + modelsuffix + "_set" + str((set_to_train + 1)) + ".json"),
+                               modelprefix + modelsuffix + ".json"),
                   "w") as json_file:
             json_file.write(model_json)
         ###############################################################################
         # save weights and write to disk as .h5 file
         ###############################################################################
         model.save_weights(
-            os.path.join(dirmodel, modelprefix + modelsuffix + "_set" + str((set_to_train + 1)) + ".h5"))
+            os.path.join(dirmodel, modelprefix + modelsuffix +  ".h5"))
         print("saved model to disk")
 else:
     pass  # network already trained so do nothing
 
-if sleep_when_done:
+
+
+#if sleep_when_done:
     # from: https://stackoverflow.com/questions/37009777/how-to-make-a-windows-10-computer-go-to-sleep-with-a-python-script
-    os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")
+#    os.system("rundll32.exe powrprof.dll,SetSuspendState 0,1,0")

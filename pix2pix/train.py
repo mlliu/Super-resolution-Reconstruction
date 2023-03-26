@@ -15,8 +15,8 @@ from data import get_dataset,get_training_set,get_test_set
 # Training settings
 parser = argparse.ArgumentParser(description='pix2pix-pytorch-implementation')
 #parser.add_argument('--dataset', required=True, help='facades')
-parser.add_argument('--batch_size', type=int, default=1, help='training batch size')
-parser.add_argument('--test_batch_size', type=int, default=1, help='testing batch size')
+parser.add_argument('--batch_size', type=int, default=64, help='training batch size')
+parser.add_argument('--test_batch_size', type=int, default=16, help='testing batch size')
 parser.add_argument('--direction', type=str, default='b2a', help='a2b or b2a')
 parser.add_argument('--input_nc', type=int, default=1, help='input image channels')
 parser.add_argument('--output_nc', type=int, default=1, help='output image channels')
@@ -30,7 +30,7 @@ parser.add_argument('--lr_policy', type=str, default='lambda', help='learning ra
 parser.add_argument('--lr_decay_iters', type=int, default=50, help='multiply by a gamma every lr_decay_iters iterations')
 parser.add_argument('--beta1', type=float, default=0.5, help='beta1 for adam. default=0.5')
 parser.add_argument('--cuda', action='store_true', help='use cuda?')
-parser.add_argument('--threads', type=int, default=4, help='number of threads for data loader to use')
+parser.add_argument('--threads', type=int, default=2, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
 parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
 opt = parser.parse_args()
@@ -85,17 +85,19 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         ######################
         # (1) Update D network
         ######################
-
+        
         optimizer_d.zero_grad()
         
         # train with fake
         fake_ab = torch.cat((real_a, fake_b), 1)
         pred_fake = net_d.forward(fake_ab.detach())
+        #print("loss step 1")
         loss_d_fake = criterionGAN(pred_fake, False)
 
         # train with real
         real_ab = torch.cat((real_a, real_b), 1)
         pred_real = net_d.forward(real_ab)
+        #print("loss step 2")
         loss_d_real = criterionGAN(pred_real, True)
         
         # Combined D loss
@@ -143,13 +145,13 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
 
     #checkpoint
-    if epoch % 50 == 0:
+    if epoch % 5 == 1:
         if not os.path.exists("checkpoint"):
             os.mkdir("checkpoint")
-        if not os.path.exists(os.path.join("checkpoint", opt.dataset)):
-            os.mkdir(os.path.join("checkpoint", opt.dataset))
-        net_g_model_out_path = "checkpoint/{}/netG_model_epoch_{}.pth".format(opt.dataset, epoch)
-        net_d_model_out_path = "checkpoint/{}/netD_model_epoch_{}.pth".format(opt.dataset, epoch)
+        #if not os.path.exists(os.path.join("checkpoint","pd_wip")):
+        #    os.mkdir(os.path.join("checkpoint", "pd_wip"))
+        net_g_model_out_path = "checkpoint/netG_model_epoch_{}.pth".format(epoch)
+        net_d_model_out_path = "checkpoint/netD_model_epoch_{}.pth".format(epoch)
         torch.save(net_g, net_g_model_out_path)
         torch.save(net_d, net_d_model_out_path)
-        print("Checkpoint saved to {}".format("checkpoint" + opt.dataset))
+        print("Checkpoint saved to {}".format("checkpoint"))
