@@ -5,6 +5,7 @@ import nibabel as nib
 import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import Dataset
+import nibabel as nib
 
 
 def get_dataset():
@@ -194,3 +195,11 @@ class MRIDataset(Dataset):
             idx = idx.tolist()        
 
         return self.x[idx],self.y[idx]
+    
+def FileSave(data, file_path):
+    """Save a NIFTI file using given file path from an array
+    Using: NiBabel"""
+    if(np.iscomplex(data).any()):
+        data = abs(data)
+    nii = nib.Nifti1Image(data, np.eye(4)) 
+    nib.save(nii, file_path)
