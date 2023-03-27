@@ -102,7 +102,7 @@ blks_rand_shift_mode = False  # 3D random block shift mode
 
 ###############################################################################
 # check if we've already trained the model; if no, train it, if yes, load it from disk
-###############################################################################
+# ##############################################################################
 # construct folder name where models are
 if loss_function == "mean_squared_error":
     foldersuffix = '_' + str(data_augm_factor) + 'aug_proj' + str(proj_direction) + 'psm' + str(
@@ -127,7 +127,7 @@ if blks_rand_shift_mode:  # if randomly shifting blocks during training process
 
 ###############################################################################
 # load model architecture and weights from .json and .hdf5 files on disk
-###############################################################################
+# ##############################################################################
 script_path = os.path.split(os.path.abspath(__file__))[0]
 # construct folder name where models are
 outpath = 'train_' + 'unet3d' + rstr + '_' + optimizers  + '_batch' + str(
@@ -141,7 +141,7 @@ dirinput = os.path.join(script_path, "../../pd_wip/pd_nifti_final/test")
 
 ####################################
 # load tif files as source to fit
-####################################
+# ###################################
 inputfiles = []
 for root, _, files in os.walk(dirinput):
     for f in files:
@@ -156,7 +156,7 @@ print('################')
 
 ###########################################
 # perform deep learning reconstruction
-###########################################
+# ##########################################
 for inputTifs in inputfiles:
 
     ########################################
@@ -171,8 +171,8 @@ for inputTifs in inputfiles:
     #    print('could not find model for', inputfiles, 'so skip')
     #    continue
     dirmodel = "train_unet3d_adam_batch12_1aug_proj0psm9_ssim_loss"
-    modelFileName = 'model_128x128x64x32(32)(0)x1_unet3d-[64x64x32]-psm9-8-4-2-0.5-F-F-batch12-56-0.001907-0.001619.hdf5'
-    jsonFileName = 'model_320x320x120(60)(60)x1_unet2d-[320x320]-psm9-16-4-2-0.5-F-F-batch100.json'
+    modelFileName = 'model_128x128x64x32(32)(0)x1_unet3d-[64x64x32]-psm9-8-4-2-0.5-F-F-batch12.h5'
+    jsonFileName = 'model_128x128x64x32(32)(0)x1_unet3d-[64x64x32]-psm9-8-4-2-0.5-F-F-batch12.json'
 
     print('json file  =>', jsonFileName)
     print('model file =>', modelFileName)
