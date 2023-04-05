@@ -33,6 +33,7 @@ parser.add_argument('--cuda', action='store_true', help='use cuda?')
 parser.add_argument('--threads', type=int, default=2, help='number of threads for data loader to use')
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
 parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
+parser.add_argument('--debug', default=False, help='debug mode')
 opt = parser.parse_args()
 
 if opt.cuda and not torch.cuda.is_available():
@@ -47,7 +48,7 @@ if opt.cuda:
 # +
 print('===> Loading datasets')
 root_path = "dataset/"
-xtrain,ytrain,xtest,ytest = get_dataset()
+xtrain,ytrain,xtest,ytest = get_dataset(opt.debug)
 train_set = get_training_set(xtrain,ytrain)
 test_set = get_test_set(xtest,ytest)
 

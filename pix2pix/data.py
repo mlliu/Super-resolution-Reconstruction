@@ -6,19 +6,18 @@ import matplotlib.pyplot as plt
 import torch
 from torch.utils.data import Dataset
 import nibabel as nib
+import torchvision.transforms as transforms
 
 
-def get_dataset():
+def get_dataset(debug=False):
     #train_dir = join(root_dir, "train")
 
     #return DatasetFromFolder(train_dir, direction)
     script_path =os.getcwd()
-    dirtarget = os.path.join(script_path, "../../pd_wip/wip_registration_nifti/train")
-    #dirsource = "data/train/CentreSquare15p25Mask"
-    dirsource = os.path.join(script_path, "../../pd_wip/pd_nifti_final/train")
-    #dirtarget = "data/train/anat1"
-    n_slices_exclude = 4
-    patches_per_set =120
+    dirtarget = os.path.join(script_path, "../../ARIC/pd_wip/wip_registration_nifti/train")
+    dirsource = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final/train")
+    n_slices_exclude = 10
+    patches_per_set =110
     #path to store the data
     suffix_npy ="_unet2d_320x320x120(60)(60)_[320x320]_psm9"
     if not os.path.exists(os.path.join(script_path, 'xtrain_master_noaug' + suffix_npy + '.npy')):
@@ -28,8 +27,9 @@ def get_dataset():
             srcfiles.sort()
             tgtfiles.sort()
             #select 10 for tiny training
-            #srcfiles=srcfiles[0:5]
-            #tgtfiles=tgtfiles[0:5]
+            if debug:
+                srcfiles=srcfiles[0:5]
+                tgtfiles=tgtfiles[0:5]
             print("srcfiles size",len(srcfiles))
             print("tgtfiles size",len(tgtfiles))
         except:
@@ -157,7 +157,7 @@ def load_tiff_volume_and_scale_si(in_dir, in_fname):
     print('min signal value is', np.amin(vol))
     # normalize volumes to have range of 0 to 1
 
-    vol = np.float32(vol / np.amax(vol))  # volume1 is source
+    #vol = np.float32(vol / np.amax(vol))  # volume1 is source
 
     return vol
 
@@ -168,8 +168,16 @@ def load_gz_to_numpy_vol(path):
     image_data = image_obj.get_fdata()
     
     #load the entire gz
-    volume = np.float32(image_data)
-    volume = volume.transpose(0,2,1)
+    volume = np.float32(image_data) #(320,128,320)
+    volume = volume.transpose(0,2,1) #(320,320,128)
+    for i in range(volume.shape[2]):
+        # map to [0,1]
+        slice = volume[:,:,i]
+        slice = slice / np.amax(slice)
+        slice = torch.from_numpy(slice).expand(1,320,320)
+
+        volume[:,:,i] = transforms.Normalize((0.5,), (0.5,))(slice).squeeze().numpy()
+    print("volume's shape",volume.shape)
     return volume
 
 
@@ -195,7 +203,7 @@ class MRIDataset(Dataset):
             idx = idx.tolist()        
 
         return self.x[idx],self.y[idx]
-    
+
 def FileSave(data, file_path):
     """Save a NIFTI file using given file path from an array
     Using: NiBabel"""

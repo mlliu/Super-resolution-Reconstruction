@@ -2,6 +2,7 @@ from os import listdir
 from os.path import join
 import random
 
+import nib as nib
 from PIL import Image
 import torch
 import torch.utils.data as data
@@ -11,8 +12,19 @@ from utils import is_image_file, load_img
 
 
 class DatasetFromFolder(data.Dataset):
-    def __init__(self, image_dir, direction):
+    def __init__(self, image_dir):
         super(DatasetFromFolder, self).__init__()
+        script_path = os.getcwd()
+        self.dirsource = os.path.join(script_path, "../../pd_wip/pd_nifti_final/train")
+        self.dirtarget = os.path.join(script_path, "../../pd_wip/wip_registration_nifti/train")
+        self.n_slices_exclude = 4
+        self.patches_per_set = 120
+        self.source_filenames = [x for x in listdir(self.dirsource) if x.endswith('.gz')]
+        self.target_filenames = [x for x in listdir(self.dirtarget) if x.endswith('.gz')]
+        self.source_filenames.sort()
+        self.target_filenames.sort()
+
+        '''
         self.direction = direction
         self.a_path = join(image_dir, "a")
         self.b_path = join(image_dir, "b")
@@ -22,33 +34,33 @@ class DatasetFromFolder(data.Dataset):
                           transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))]
 
         self.transform = transforms.Compose(transform_list)
-
+        '''
     def __getitem__(self, index):
-        a = Image.open(join(self.a_path, self.image_filenames[index])).convert('RGB')
-        b = Image.open(join(self.b_path, self.image_filenames[index])).convert('RGB')
-        a = a.resize((286, 286), Image.BICUBIC)
-        b = b.resize((286, 286), Image.BICUBIC)
+        a = nib.load(join(self.dirsource, self.source_filenames[index])).get_fdata()
+        b = nib.load(join(self.dirtarget, self.target_filenames[index])).get_fdata()
+        #a = a.resize((286, 286), Image.BICUBIC)
+        #b = b.resize((286, 286), Image.BICUBIC)
         a = transforms.ToTensor()(a)
         b = transforms.ToTensor()(b)
-        w_offset = random.randint(0, max(0, 286 - 256 - 1))
-        h_offset = random.randint(0, max(0, 286 - 256 - 1))
+        #w_offset = random.randint(0, max(0, 286 - 256 - 1))
+        #h_offset = random.randint(0, max(0, 286 - 256 - 1))
     
-        a = a[:, h_offset:h_offset + 256, w_offset:w_offset + 256]
-        b = b[:, h_offset:h_offset + 256, w_offset:w_offset + 256]
+        #a = a[:, h_offset:h_offset + 256, w_offset:w_offset + 256]
+        #b = b[:, h_offset:h_offset + 256, w_offset:w_offset + 256]
     
         a = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(a)
         b = transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))(b)
 
-        if random.random() < 0.5:
-            idx = [i for i in range(a.size(2) - 1, -1, -1)]
-            idx = torch.LongTensor(idx)
-            a = a.index_select(2, idx)
-            b = b.index_select(2, idx)
+        #if random.random() < 0.5:
+        #    idx = [i for i in range(a.size(2) - 1, -1, -1)]
+        #    idx = torch.LongTensor(idx)
+        #    a = a.index_select(2, idx)
+        #    b = b.index_select(2, idx)
 
-        if self.direction == "a2b":
-            return a, b
-        else:
-            return b, a
-
+        #if self.direction == "a2b":
+        #    return a, b
+        #else:
+        #    return b, a
+        return a, b
     def __len__(self):
-        return len(self.image_filenames)
+        return len(self.source_filenames)
