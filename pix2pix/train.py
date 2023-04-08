@@ -36,7 +36,9 @@ parser.add_argument('--seed', type=int, default=123, help='random seed to use. D
 parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
 parser.add_argument('--debug', default=False, help='debug mode')
 parser.add_argument('--norm_type', choices=['max','percentile'], default='max', help='normalization type')
-parser.add_argument('--mip_type', action='store_true', help='mip type')
+parser.add_argument('--mip_type', type = int, default=0, help='mip type')
+parser.add_argument('--modelfile',type = str,help="the path to save the model")
+
 opt = parser.parse_args()
 
 if opt.cuda and not torch.cuda.is_available():
@@ -78,9 +80,9 @@ net_g_scheduler = get_scheduler(optimizer_g, opt)
 net_d_scheduler = get_scheduler(optimizer_d, opt)
 
 #model path to save
-modelpath = "checkpoint_norm_" + opt.norm_type + "_mip_ " + opt.mip_type
-if not os.path.exists(modelpath):
-    os.mkdir(modelpath)
+#modelfile = "checkpoint_norm_" + opt.norm_type + "_mip_ " + opt.mip_type
+if not os.path.exists(opt.modelfile):
+    os.mkdir(opt.modelfile)
 
 print('===> Training')
 g_loss = []
@@ -160,14 +162,14 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     test_loss.append(avg_psnr / len(testing_data_loader))
 
     #checkpoint
-    if epoch % 1 == 0:
+    if epoch % 20 == 0:
 
         #if not os.path.exists(os.path.join("checkpoint","pd_wip")):
         #    os.mkdir(os.path.join("checkpoint", "pd_wip"))
-        net_g_model_out_path = modelpath + \
-                               "/netG_model_epoch_{}.pth".format(epoch)
-        net_d_model_out_path = modelpath+ \
-                               "/netD_model_epoch_{}.pth".format(epoch)
+        net_g_model_out_path = opt.modelfile + \
+                               "netG_model_epoch_{}.pth".format(epoch)
+        net_d_model_out_path = opt.modelfile+ \
+                               "netD_model_epoch_{}.pth".format(epoch)
         torch.save(net_g, net_g_model_out_path)
         torch.save(net_d, net_d_model_out_path)
         print("Checkpoint saved to {}".format("checkpoint"))
@@ -179,4 +181,4 @@ plt.plot(g_loss, label='g_loss')
 plt.plot(d_loss, label='d_loss')
 plt.plot(test_loss, label='test_loss')
 plt.legend()
-plt.savefig(modelpath + "/loss_curve.png")
+plt.savefig(opt.modelfile + "loss_curve.png")

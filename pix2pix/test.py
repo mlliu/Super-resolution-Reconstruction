@@ -17,28 +17,28 @@ parser.add_argument('--nepochs', type=int, default=200, help='saved model of whi
 parser.add_argument('--cuda', action='store_true', help='use cuda')
 parser.add_argument('--norm_type', choices=['max','percentile'], default='max', help='normalization type')
 parser.add_argument('--mip_type', default=False, help='mip type')
+parser.add_argument('--modelfile',type = str,help="the path to save the model")
 opt = parser.parse_args()
 print(opt)
 
 device = torch.device("cuda:0" if opt.cuda else "cpu")
 
 #model path
-modelpath ="checkpoint_norm_" + opt.norm_type + "_mip_ " + opt.mip_type
-modelname = modelpath +"/netG_model_epoch_{}.pth".format(opt.nepochs)
+modelname = opt.modelfile +"netG_model_epoch_{}.pth".format(opt.nepochs)
 net_g = torch.load(modelname,map_location=torch.device('cpu')).to("cpu")
 
 # generated image save path
-out_dir = modelpath+"/result/"
+out_dir = opt.modelfile+"result/"
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 script_path =os.getcwd()
 
 #test image path
-if mip_type:
+if opt.mip_type==16:
     testname = 'test16'
 else:
     testname = 'test'
-image_dir = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final",testname)
+image_dir = os.path.join(script_path, "/home/mliu121/data-yqiao4/pd_wip/pd_nifti_final",testname)
 image_filenames = [x for x in os.listdir(image_dir) if x.endswith('.gz')]
 
 # transform_list = [transforms.ToTensor(),
