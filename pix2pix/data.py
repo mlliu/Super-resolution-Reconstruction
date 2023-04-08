@@ -20,12 +20,14 @@ def get_dataset(debug=False,norm_type='max',mip_type=False):
         trainname = 'train16'
     else:
         trainname = 'train'
-    #running data path is used to store the data used for running 
-    datapath = "/home/mliu121/data-yqiao4/running_data/"
+    #running data path is used to store the data used for running
+    #root_data = "/home/mliu121/data-yqiao4/"
+    root_data = "/Users/meililiu/Desktop/Course/medical_image/ARIC/"
+    datapath = root_data+"running_data/"
     if not os.path.exists(datapath):
         os.mkdir(datapath)
-    target  = "/home/mliu121/data-yqiao4/pd_wip/wip_registration_nifti/"
-    source = "/home/mliu121/data-yqiao4/pd_wip/pd_nifti_final/"
+    target  = root_data+ "pd_wip/wip_registration_nifti/"
+    source = root_data+"pd_wip/pd_nifti_final/"
     
     dirtarget = os.path.join(target,trainname)
     dirsource = os.path.join(source,trainname)
@@ -43,8 +45,8 @@ def get_dataset(debug=False,norm_type='max',mip_type=False):
             tgtfiles.sort()
             #select 10 for tiny training
             if debug:
-                srcfiles=srcfiles[0:5]
-                tgtfiles=tgtfiles[0:5]
+                srcfiles=srcfiles[0:1]
+                tgtfiles=tgtfiles[0:1]
             print("srcfiles size",len(srcfiles))
             print("tgtfiles size",len(tgtfiles))
         except:
@@ -149,11 +151,21 @@ def load_gz_to_numpy_vol(in_dir, in_fname,norm_type='max'):
     #load the entire gz
     volume = np.float32(image_data) #(320,128,320)
     volume = volume.transpose(0,2,1) #(320,320,128)
+    print("volume's shape",volume.shape)
+    #check if there is any nan valuem if so, replace the position with 0
+    if len(np.argwhere(np.isinf(volume))) > 0:
+        print("there is inf value in the volume")
+        for xyz in np.argwhere(np.isinf(volume)):
+            volume[xyz[0], xyz[1], xyz[2]] = 0
+
+    #normalize the volume
     for i in range(volume.shape[2]):
         # map to [0,1]
         #compare the max value of each slice with the 0.95 percentile value, 0.95 percentile value is more robust.
         #print("max value of slice",i,"is",np.amax(volume[:,:,i]))
         #print("95 percentile value of slice",i,"is",np.percentile(volume[:,:,i],95))
+        #print the min value of each slice
+        #print("min value of slice",i,"is",np.amin(volume[:,:,i]))
         if norm_type == 'percentile':
             norm_value = np.percentile(volume[:,:,i],95)
         else:
@@ -161,10 +173,10 @@ def load_gz_to_numpy_vol(in_dir, in_fname,norm_type='max'):
         slice = volume[:,:,i]
         slice = slice / norm_value
         slice = torch.from_numpy(slice).expand(1,320,320)
-
         #then do normalization
         volume[:,:,i] = transforms.Normalize((0.5,), (0.5,))(slice).squeeze().numpy()
     print("volume's shape",volume.shape)
+
     return volume
 
 
@@ -200,6 +212,6 @@ def FileSave(data, file_path):
     nib.save(nii, file_path)
 
 def main():
-    xtrain, ytrain, xtest, ytest = get_dataset(debug=True,norm_type='percentile',mip_type=False)
+    xtrain, ytrain, xtest, ytest = get_dataset(debug=False,norm_type='max',mip_type=16)
 if __name__ == '__main__':
     main()
