@@ -160,7 +160,7 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     test_loss.append(avg_psnr / len(testing_data_loader))
 
     #checkpoint
-    if epoch % 20 == 0:
+    if epoch % 1 == 0:
 
         #if not os.path.exists(os.path.join("checkpoint","pd_wip")):
         #    os.mkdir(os.path.join("checkpoint", "pd_wip"))
