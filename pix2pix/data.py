@@ -1,5 +1,6 @@
 from os.path import join
 import os
+os.environ['KMP_DUPLICATE_LIB_OK']='True'
 import numpy as np
 import nibabel as nib
 import matplotlib.pyplot as plt
@@ -9,20 +10,29 @@ import nibabel as nib
 import torchvision.transforms as transforms
 
 
-def get_dataset(debug=False):
+def get_dataset(debug=False,norm_type='max',mip_type=False):
     #train_dir = join(root_dir, "train")
 
     #return DatasetFromFolder(train_dir, direction)
     script_path =os.getcwd()
-    dirtarget = os.path.join(script_path, "../../ARIC/pd_wip/wip_registration_nifti/train")
-    dirsource = os.path.join(script_path, "../../ARIC/pd_wip/pd_nifti_final/train")
+    print("mip_type",mip_type)
+    if  mip_type:
+        trainname = 'train16'
+    else:
+        trainname = 'train'
+    target  = "../../ARIC/pd_wip/wip_registration_nifti/"
+    source = "../../ARIC/pd_wip/pd_nifti_final/"
+    dirtarget = os.path.join(script_path,target+trainname)
+    dirsource = os.path.join(script_path, source+trainname)
     n_slices_exclude = 10
     patches_per_set =110
     #path to store the data
-    suffix_npy ="_unet2d_320x320x120(60)(60)_[320x320]_psm9"
+    #suffix_npy ="_unet2d_320x320x120(60)(60)_[320x320]_psm9"
+    suffix_npy ="_norm_"+norm_type+"_mip_"+str(mip_type)
     if not os.path.exists(os.path.join(script_path, 'xtrain_master_noaug' + suffix_npy + '.npy')):
         print("training data not found, so must create it")
         try:
+            #print(dirsource,dirtarget)
             srcfiles, tgtfiles = get_source_and_target_files(dirsource, dirtarget)
             srcfiles.sort()
             tgtfiles.sort()
@@ -56,9 +66,9 @@ def get_dataset(debug=False):
             # load numpy arrays, reproject dataset (if needed) and trim and normalize dataset,
             ###################################
             # (320, 128, 320)
-            volume1 = load_tiff_volume_and_scale_si(dirsource, icode)
+            volume1 = load_gz_to_numpy_vol(dirsource, icode, norm_type=norm_type)
             print('wid is =>', tgtfiles[m])
-            volume3 = load_tiff_volume_and_scale_si(dirtarget, tgtfiles[m])
+            volume3 = load_gz_to_numpy_vol(dirtarget, tgtfiles[m], norm_type=norm_type)
 
             print('creating training data set...')
             xtrain_master_noaug[m * patches_per_set:(m + 1) * patches_per_set, :, :,
@@ -125,44 +135,8 @@ def get_source_and_target_files(dirsource, dirtarget):
             tgtfiles.append(fname)
     return srcfiles, tgtfiles
 
-
-def load_tiff_volume_and_scale_si(in_dir, in_fname):
-    """
-    :param in_dir: input directory
-    :param in_fname: input filename
-    :param crop_x: crop factor in x direction
-    :param crop_y: crop factor in y direction
-    :param blksz: patch size (i.e. the length or height of patch, either integer or tuple)
-    :param proj_direction: projection direction
-    :param subset_train_mode: boolean subset mode flag
-    :param subset_train_minslc: if loading a subset, min slice index to load
-    :param subset_train_maxslc: if loading a subset, max slice index to load
-    :return:    vol (tiff volume scaled between 0 and 1), maxsi (maximum signal intensity of original volume)
-    """
-
-    #vol = load_tiff_to_numpy_vol(os.path.join(in_dir, in_fname), subset_train_mode, subset_train_minslc,
-    #                             subset_train_maxslc)
-    vol = load_gz_to_numpy_vol(os.path.join(in_dir, in_fname))
-    print("volume's shape",vol.shape)
-
-    # adjust x and y dimensions of volume to divide evenly into blksz
-    # while cropping using 'crop_train' to increase speed and avoid non-pertinent regions
-
-    #vol = crop_volume_in_xy_and_reproject_2D(vol, crop_x, crop_y, blksz, proj_direction)
-    #vol = np.float32(vol)
-    if len(np.argwhere(np.isinf(vol))) > 0:
-        for xyz in np.argwhere(np.isinf(vol)):
-            vol[xyz[0], xyz[1], xyz[2]] = 0
-    print('max signal value is', np.amax(vol))
-    print('min signal value is', np.amin(vol))
-    # normalize volumes to have range of 0 to 1
-
-    #vol = np.float32(vol / np.amax(vol))  # volume1 is source
-
-    return vol
-
-
-def load_gz_to_numpy_vol(path):
+def load_gz_to_numpy_vol(in_dir, in_fname,norm_type='max'):
+    path = os.path.join(in_dir, in_fname)
     image_obj = nib.load(path)
     # Extract data as numpy ndarray
     image_data = image_obj.get_fdata()
@@ -172,10 +146,18 @@ def load_gz_to_numpy_vol(path):
     volume = volume.transpose(0,2,1) #(320,320,128)
     for i in range(volume.shape[2]):
         # map to [0,1]
+        #compare the max value of each slice with the 0.95 percentile value, 0.95 percentile value is more robust.
+        #print("max value of slice",i,"is",np.amax(volume[:,:,i]))
+        #print("95 percentile value of slice",i,"is",np.percentile(volume[:,:,i],95))
+        if norm_type == 'percentile':
+            norm_value = np.percentile(volume[:,:,i],95)
+        else:
+            norm_value = np.amax(volume[:,:,i])
         slice = volume[:,:,i]
-        slice = slice / np.amax(slice)
+        slice = slice / norm_value
         slice = torch.from_numpy(slice).expand(1,320,320)
 
+        #then do normalization
         volume[:,:,i] = transforms.Normalize((0.5,), (0.5,))(slice).squeeze().numpy()
     print("volume's shape",volume.shape)
     return volume
@@ -211,3 +193,8 @@ def FileSave(data, file_path):
         data = abs(data)
     nii = nib.Nifti1Image(data, np.eye(4)) 
     nib.save(nii, file_path)
+
+def main():
+    xtrain, ytrain, xtest, ytest = get_dataset(debug=True,norm_type='percentile',mip_type=False)
+if __name__ == '__main__':
+    main()

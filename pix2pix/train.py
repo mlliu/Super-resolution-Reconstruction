@@ -11,6 +11,7 @@ import torch.backends.cudnn as cudnn
 
 from networks import define_G, define_D, GANLoss, get_scheduler, update_learning_rate
 from data import get_dataset,get_training_set,get_test_set
+import matplotlib.pyplot as plt
 
 # Training settings
 parser = argparse.ArgumentParser(description='pix2pix-pytorch-implementation')
@@ -34,6 +35,8 @@ parser.add_argument('--threads', type=int, default=2, help='number of threads fo
 parser.add_argument('--seed', type=int, default=123, help='random seed to use. Default=123')
 parser.add_argument('--lamb', type=int, default=10, help='weight on L1 term in objective')
 parser.add_argument('--debug', default=False, help='debug mode')
+parser.add_argument('--norm_type', choices=['max','percentile'], default='max', help='normalization type')
+parser.add_argument('--mip_type', action='store_true', help='mip type')
 opt = parser.parse_args()
 
 if opt.cuda and not torch.cuda.is_available():
@@ -48,7 +51,7 @@ if opt.cuda:
 # +
 print('===> Loading datasets')
 root_path = "dataset/"
-xtrain,ytrain,xtest,ytest = get_dataset(opt.debug)
+xtrain,ytrain,xtest,ytest = get_dataset(opt.debug,norm_type=opt.norm_type,mip_type=opt.mip_type)
 train_set = get_training_set(xtrain,ytrain)
 test_set = get_test_set(xtest,ytest)
 
@@ -74,6 +77,15 @@ optimizer_d = optim.Adam(net_d.parameters(), lr=opt.lr, betas=(opt.beta1, 0.999)
 net_g_scheduler = get_scheduler(optimizer_g, opt)
 net_d_scheduler = get_scheduler(optimizer_d, opt)
 
+#model path to save
+modelpath = "checkpoint_norm_" + opt.norm_type + "_mip_ " + opt.mip_type
+if not os.path.exists(modelpath):
+    os.mkdir(modelpath)
+
+print('===> Training')
+g_loss = []
+d_loss = []
+test_loss = []
 for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     # train
     print("epoch: ",epoch )
@@ -130,7 +142,8 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
 
         print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
             epoch, iteration, len(training_data_loader), loss_d.item(), loss_g.item()))
-
+        g_loss.append(loss_g.item())
+        d_loss.append(loss_d.item())
     update_learning_rate(net_g_scheduler, optimizer_g)
     update_learning_rate(net_d_scheduler, optimizer_d)
 
@@ -144,15 +157,26 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         psnr = 10 * log10(1 / mse.item())
         avg_psnr += psnr
     print("===> Avg. PSNR: {:.4f} dB".format(avg_psnr / len(testing_data_loader)))
+    test_loss.append(avg_psnr / len(testing_data_loader))
 
     #checkpoint
-    if epoch % 5 == 1:
-        if not os.path.exists("checkpoint"):
-            os.mkdir("checkpoint")
+    if epoch % 20 == 0:
+
         #if not os.path.exists(os.path.join("checkpoint","pd_wip")):
         #    os.mkdir(os.path.join("checkpoint", "pd_wip"))
-        net_g_model_out_path = "checkpoint/netG_model_epoch_{}.pth".format(epoch)
-        net_d_model_out_path = "checkpoint/netD_model_epoch_{}.pth".format(epoch)
+        net_g_model_out_path = modelpath + \
+                               "/netG_model_epoch_{}.pth".format(epoch)
+        net_d_model_out_path = modelpath+ \
+                               "/netD_model_epoch_{}.pth".format(epoch)
         torch.save(net_g, net_g_model_out_path)
         torch.save(net_d, net_d_model_out_path)
         print("Checkpoint saved to {}".format("checkpoint"))
+
+#after finishing training
+#plot loss curve based on g_loss, d_loss and test_loss and save the figure to the modelpath
+plt.figure()
+plt.plot(g_loss, label='g_loss')
+plt.plot(d_loss, label='d_loss')
+plt.plot(test_loss, label='test_loss')
+plt.legend()
+plt.savefig(modelpath + "/loss_curve.png")
