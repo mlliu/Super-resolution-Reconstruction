@@ -1,13 +1,12 @@
 #!/bin/bash
 
-#SBATCH -A yqiao4_gpu
-#SBATCH --partition a100
-#SBATCH --gres=gpu:1
+#SBATCH -A yqiao4
+#SBATCH --partition defq
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=12:00:00
-#SBATCH --job-name="cgan"
-#SBATCH --mem-per-cpu=100G
+#SBATCH --job-name="cgan test"
+#SBATCH --mem-per-cpu=10G
 
 module load anaconda
 
