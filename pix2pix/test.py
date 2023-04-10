@@ -28,7 +28,7 @@ modelname = opt.modelfile +"netG_model_epoch_{}.pth".format(opt.nepochs)
 net_g = torch.load(modelname,map_location=torch.device('cpu')).to("cpu")
 
 # generated image save path
-out_dir = opt.modelfile+"result/"
+out_dir = opt.modelfile+"result_"+str(opt.nepochs)+"/"
 if not os.path.exists(out_dir):
     os.makedirs(out_dir)
 script_path =os.getcwd()

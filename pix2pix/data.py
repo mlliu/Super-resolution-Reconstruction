@@ -21,8 +21,8 @@ def get_dataset(debug=False,norm_type='max',mip_type=False):
     else:
         trainname = 'train'
     #running data path is used to store the data used for running
-    #root_data = "/home/mliu121/data-yqiao4/"
-    root_data = "/Users/meililiu/Desktop/Course/medical_image/ARIC/"
+    root_data = "/home/mliu121/data-yqiao4/"
+    #root_data = "/Users/meililiu/Desktop/Course/medical_image/ARIC/"
     datapath = root_data+"running_data/"
     if not os.path.exists(datapath):
         os.mkdir(datapath)
@@ -31,8 +31,8 @@ def get_dataset(debug=False,norm_type='max',mip_type=False):
     
     dirtarget = os.path.join(target,trainname)
     dirsource = os.path.join(source,trainname)
-    n_slices_exclude = 10
-    patches_per_set =110
+    n_slices_exclude = 30
+    patches_per_set =70
     #path to store the data
     #suffix_npy ="_unet2d_320x320x120(60)(60)_[320x320]_psm9"
     suffix_npy ="_norm_"+norm_type+"_mip_"+str(mip_type)

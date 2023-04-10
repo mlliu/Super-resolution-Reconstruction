@@ -20,11 +20,12 @@ conda activate cgan # open the Python environment
 
 # runs your code
 #srun python classification.py  --experiment "overfit"  --device cuda --model "distilbert-base-uncased" --batch_size "64" --lr 1e-4 --num_epochs 30
-norm_type="max" #"percentile"
-mip_type=16
+norm_type="max"
+mip_type=0
+nepochs=20
 scratchpath="/home/mliu121/scratch4-yqiao4/"
 modelfile=$scratchpath"checkpoint_norm_"$norm_type"_mip_"$mip_type"/"
 mkdir -p $modelfile
 
-srun python train.py --cuda --norm_type $norm_type  --mip_type $mip_type --modelfile $modelfile > $modelfile"train_log" 
-srun python test.py --cuda --norm_type $norm_type  --mip_type $mip_type --modelfile $modelfile > $modelfule"test_log"
+#srun python train.py --cuda --norm_type $norm_type  --mip_type $mip_type --modelfile $modelfile > $modelfile"train_log" 
+srun python test.py --cuda --norm_type $norm_type  --nepochs $nepochs --mip_type $mip_type --modelfile $modelfile > $modelfule"test_log"
